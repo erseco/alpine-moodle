@@ -1,2 +1,2 @@
-* * * * * echo "hello stackoverflow"$(date) >> /var/www/html/test_file 2>&1
+
 * * * * * /usr/bin/php  /var/www/html/admin/cli/cron.php > /dev/null
