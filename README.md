@@ -46,7 +46,6 @@ Define the ENV variables in docker-compose.yml file
     DB_USER="moodle"
     DB_PASS="moodle"
     DB_PREFIX="mdl_"
-    DB_COLLATION="utf8mb4_unicode_ci"
     MOODLE_EMAIL="user@example.com"
     MOODLE_LANGUAGE="en"
     MOODLE_SITENAME="New Site"
