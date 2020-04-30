@@ -40,6 +40,10 @@ if [ ! -f /var/www/html/config.php ]; then
         --agree-license \
         --skip-database
 
+    if [ "$SSLPROXY" = 'true' ]; then
+        sed -i '/require_once/i $CFG->sslproxy=true;' /var/www/html/config.php
+    fi
+
 fi
 
 # Check if the database is already installed

@@ -25,6 +25,7 @@ ENV MOODLE_URL=https://github.com/moodle/moodle/archive/MOODLE_38_STABLE.tar.gz 
     DB_USER=moodle \
     DB_PASS=moodle \
     DB_PREFIX=mdl_ \
+    SSLPROXY=false \
     MOODLE_EMAIL=user@example.com \
     MOODLE_LANGUAGE=en \
     MOODLE_SITENAME=New-Site \
@@ -39,3 +40,4 @@ ENV MOODLE_URL=https://github.com/moodle/moodle/archive/MOODLE_38_STABLE.tar.gz 
     MOODLE_MAIL_PREFIX=[moodle]
 
 RUN curl --location $MOODLE_URL | tar xz --strip-components=1 -C /var/www/html/
+
