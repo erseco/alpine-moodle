@@ -6,12 +6,12 @@ Repository: https://github.com/erseco/alpine-moodle
 
 
 * Built on the lightweight image https://github.com/erseco/alpine-php7-webserver
-* Very small Docker image size (+/-35MB)
+* Very small Docker image size (+/-70MB)
 * Uses PHP 7.3 for better performance, lower cpu usage & memory footprint
 * Optimized for 100 concurrent users
 * Optimized to only use resources when there's traffic (by using PHP-FPM's ondemand PM)
 * Use of runit instead of supervisord to reduce memory footprint
-* Configured cron job
+* Configured cron to run as non-privileged user https://github.com/gliderlabs/docker-alpine/issues/381#issuecomment-621946699
 * docker-compose sample with PostgreSQL
 * Configuration via ENV variables
 * Easily upgradable to new moodle versions
