@@ -1,0 +1,14 @@
+#!/bin/sh
+
+# Touch cron files to fix 'NUMBER OF HARD LINKS > 1' issue. See  https://github.com/phusion/baseimage-docker/issues/198
+touch -c /var/spool/cron/crontabs/*
+touch -c /etc/crontab
+touch -c /etc/cron.d/* /etc/cron.daily/* /etc/cron.hourly/* /etc/cron.monthly/* /etc/cron.weekly/*
+
+# pipe stderr to stdout and run cron
+exec 2>&1
+exec /usr/sbin/crond -f
+
+# #!/bin/sh
+# exec 2>&1
+# exec crond -f -M /usr/bin/logger

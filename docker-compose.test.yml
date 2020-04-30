@@ -1,0 +1,23 @@
+version: '3.5'
+services:
+  app:
+    build: .
+    environment:
+      - SITE_URL=http://app:8080
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:alpine
+    environment:
+      - POSTGRES_PASSWORD=moodle
+      - POSTGRES_USER=moodle
+      - POSTGRES_DB=moodle
+
+  sut:
+    image: alpine:3.11
+    depends_on:
+      - app
+    command: /tmp/run_tests.sh
+    volumes:
+      - "./run_tests.sh:/tmp/run_tests.sh:ro"
