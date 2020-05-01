@@ -22,13 +22,13 @@ if [ ! -f /var/www/html/config.php ]; then
     echo "Generating config.php file..."
     php /var/www/html/admin/cli/install.php \
         --lang=$MOODLE_LANGUAGE \
-        --wwwroot=$SITE_URL\
+        --wwwroot=$SITE_URL \
         --dataroot=/var/www/moodledata/ \
         --dbtype=$DB_TYPE \
         --dbhost=$DB_HOST \
         --dbname=$DB_NAME \
         --dbuser=$DB_USER \
-        --dbpass=$DB_USER \
+        --dbpass=$DB_PASS \
         --dbport=$DB_PORT \
         --prefix=$DB_PREFIX \
         --fullname=Dockerized_Moodle \
