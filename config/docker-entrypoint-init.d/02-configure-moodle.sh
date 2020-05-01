@@ -80,7 +80,7 @@ if php /var/www/html/admin/cli/isinstalled.php ; then
 else
     echo "Upgrading moodle..."
     php /var/www/html/admin/cli/maintenance.php --enable
-    php /var/www/html/admin/cli/upgrade.php
+    php /var/www/html/admin/cli/upgrade.php --non-interactive
     php /var/www/html/admin/cli/maintenance.php --disable
 fi
 
