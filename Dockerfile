@@ -3,7 +3,7 @@ FROM erseco/alpine-php7-webserver
 MAINTAINER Ernesto Serrano <info@ernesto.es>
 
 USER root
-COPY --chown=nobody config/ /
+COPY --chown=nobody rootfs/ /
 
 # crond needs root, so install dcron and cap package and set the capabilities
 # on dcron binary https://github.com/inter169/systs/blob/master/alpine/crond/README.md
