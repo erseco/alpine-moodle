@@ -1,0 +1,5 @@
+#!/bin/sh
+
+# pipe stderr to stdout and run cron
+exec 2>&1
+exec /usr/sbin/crond -f
