@@ -37,7 +37,10 @@ ENV MOODLE_URL=https://github.com/moodle/moodle/archive/MOODLE_38_STABLE.tar.gz 
     SMTP_PASSWORD=your_password \
     SMTP_PROTOCOL=tls \
     MOODLE_MAIL_NOREPLY_ADDRESS=noreply@localhost \
-    MOODLE_MAIL_PREFIX=[moodle]
+    MOODLE_MAIL_PREFIX=[moodle] \
+    client_max_body_size=50M \
+    post_max_size=50M \
+    upload_max_filesize=50M
 
 RUN curl --location $MOODLE_URL | tar xz --strip-components=1 -C /var/www/html/
 
