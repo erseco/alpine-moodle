@@ -18,6 +18,8 @@ services:
     image: alpine:3.11
     depends_on:
       - app
+    environment:
+      - SOURCE_BRANCH
     command: /tmp/run_tests.sh
     volumes:
       - "./run_tests.sh:/tmp/run_tests.sh:ro"
