@@ -14,7 +14,8 @@ RUN apk add --no-cache dcron libcap && \
 
 USER nobody
 
-ENV LANG=en_US.UTF-8 \
+ENV SOURCE_BRANCH=$SOURCE_BRANCH \
+    LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
     SITE_URL=http://localhost \
     DB_TYPE=pgsql \
