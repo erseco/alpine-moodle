@@ -1,6 +1,8 @@
 FROM erseco/alpine-php7-webserver:latest
 
-MAINTAINER Ernesto Serrano <info@ernesto.es>
+LABEL maintainer="Ernesto Serrano <info@ernesto.es>"
+ARG SOURCE_BRANCH
+ARG SOURCE_COMMIT
 
 USER root
 COPY --chown=nobody rootfs/ /
