@@ -1,4 +1,4 @@
-FROM erseco/alpine-php7-webserver
+FROM erseco/alpine-php7-webserver:latest
 
 MAINTAINER Ernesto Serrano <info@ernesto.es>
 
@@ -13,9 +13,7 @@ RUN apk add --no-cache dcron libcap && \
 
 USER nobody
 
-# Change MOODLE_38_STABLE for new versions
-ENV MOODLE_URL=https://github.com/moodle/moodle/archive/MOODLE_38_STABLE.tar.gz \
-    LANG=en_US.UTF-8 \
+ENV LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
     SITE_URL=http://localhost \
     DB_TYPE=pgsql \
@@ -42,5 +40,5 @@ ENV MOODLE_URL=https://github.com/moodle/moodle/archive/MOODLE_38_STABLE.tar.gz 
     post_max_size=50M \
     upload_max_filesize=50M
 
-RUN curl --location $MOODLE_URL | tar xz --strip-components=1 -C /var/www/html/
+RUN curl --location https://github.com/moodle/moodle/archive/$SOURCE_BRANCH.tar.gz | tar xz --strip-components=1 -C /var/www/html/
 
