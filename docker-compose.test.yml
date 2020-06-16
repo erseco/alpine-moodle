@@ -15,7 +15,7 @@ services:
       - POSTGRES_DB=moodle
 
   sut:
-    image: alpine:3.11
+    image: alpine:latest
     depends_on:
       - app
     environment:
