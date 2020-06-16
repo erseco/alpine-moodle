@@ -1,3 +1,10 @@
+[![Docker Pulls](https://img.shields.io/docker/pulls/erseco/alpine-moodle.svg)](https://hub.docker.com/r/erseco/alpine-moodle/)
+[![Docker image layers](https://images.microbadger.com/badges/image/erseco/alpine-moodle.svg)](https://microbadger.com/images/erseco/alpine-moodle)
+![nginx 1.16.1](https://img.shields.io/badge/nginx-1.16-brightgreen.svg)
+![php 7.3](https://img.shields.io/badge/php-7.3-brightgreen.svg)
+![moodle-3.8.3](https://img.shields.io/badge/moodle-3.8.3-yellow)
+![License MIT](https://img.shields.io/badge/license-MIT-blue.svg)
+
 # Moodle on Alpine Linux
 Moodle setup for Docker, build on [Alpine Linux](http://www.alpinelinux.org/).
 The image is only +/- 70MB large.
@@ -18,10 +25,6 @@ Repository: https://github.com/erseco/alpine-moodle
 * The servers Nginx, PHP-FPM run under a non-privileged user (nobody) to make it more secure
 * The logs of all the services are redirected to the output of the Docker container (visible with `docker logs -f <container name>`)
 * Follows the KISS principle (Keep It Simple, Stupid) to make it easy to understand and adjust the image to your needs
-
-[![Docker Pulls](https://img.shields.io/docker/pulls/erseco/alpine-moodle.svg)](https://hub.docker.com/r/erseco/alpine-moodle/)
-[![Docker image layers](https://images.microbadger.com/badges/image/erseco/alpine-moodle.svg)](https://microbadger.com/images/erseco/alpine-moodle)
-![License MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 
 ## Usage
 
