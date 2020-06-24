@@ -65,3 +65,4 @@ Define the ENV variables in docker-compose.yml file
 | client_max_body_size        | 50M                  |                                                                          |
 | post_max_size               | 50M                  |                                                                          |
 | upload_max_filesize         | 50M                  |                                                                          |
+| max_input_vars              | 2000                 |                                                                          |

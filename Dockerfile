@@ -41,7 +41,8 @@ ENV MOODLE_URL=https://github.com/moodle/moodle/archive/MOODLE_39_STABLE.tar.gz 
     MOODLE_MAIL_PREFIX=[moodle] \
     client_max_body_size=50M \
     post_max_size=50M \
-    upload_max_filesize=50M
+    upload_max_filesize=50M \
+    max_input_vars=2000
 
 RUN curl --location $MOODLE_URL | tar xz --strip-components=1 -C /var/www/html/
 
