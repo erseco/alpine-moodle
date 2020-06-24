@@ -1,4 +1,5 @@
-FROM erseco/alpine-php7-webserver
+ARG ARCH=
+FROM ${ARCH}erseco/alpine-php7-webserver
 
 LABEL maintainer="Ernesto Serrano <info@ernesto.es>"
 
