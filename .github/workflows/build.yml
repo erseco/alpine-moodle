@@ -21,7 +21,13 @@ jobs:
           TAGS="--tag ${DOCKER_IMAGE}:${VERSION}"
 
           if [[ $GITHUB_REF == refs/tags/* ]]; then
+            MAJOR=`echo $VERSION | cut -d. -f1`
+            MINOR=`echo $VERSION | cut -d. -f2`
+
             TAGS="$TAGS --tag ${DOCKER_IMAGE}:latest"
+            TAGS="$TAGS --tag ${DOCKER_IMAGE}:$MAJOR"
+            TAGS="$TAGS --tag ${DOCKER_IMAGE}:$MAJOR.$MINOR"
+
           fi
           if [[ $VERSION = "master" ]]; then
             TAGS="$TAGS --tag ${DOCKER_IMAGE}:beta"
