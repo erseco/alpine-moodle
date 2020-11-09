@@ -2,7 +2,7 @@
 [![Docker image layers](https://images.microbadger.com/badges/image/erseco/alpine-moodle.svg)](https://microbadger.com/images/erseco/alpine-moodle)
 ![nginx 1.18.0](https://img.shields.io/badge/nginx-1.18-brightgreen.svg)
 ![php 7.3](https://img.shields.io/badge/php-7.3-brightgreen.svg)
-![moodle-3.9](https://img.shields.io/badge/moodle-3.9-yellow)
+![moodle-3.10](https://img.shields.io/badge/moodle-3.10-yellow)
 ![License MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 
 # Moodle on Alpine Linux
