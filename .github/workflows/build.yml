@@ -41,7 +41,8 @@ jobs:
             --build-arg VCS_REF=${GITHUB_SHA::8} \
             ${TAGS} .
           echo ::set-output name=tags::${TAGS}
-	  echo ::set-output name=platforms::${DOCKER_PLATFORMS} 
+          echo ::set-output name=platforms::${DOCKER_PLATFORMS}
+
       - name: Set up QEMU
         id: qemu
         uses: docker/setup-qemu-action@v1
