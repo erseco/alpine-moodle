@@ -18,30 +18,17 @@ jobs:
           DOCKER_PLATFORMS=linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/386,linux/ppc64le,linux/s390x
 
           VERSION=${GITHUB_REF#refs/*/}
-          TAGS="--tag ${DOCKER_IMAGE}:${VERSION}"
+          TAGS="erseco/${REPO_NAME}:${VERSION}"
 
           if [[ $GITHUB_REF == refs/tags/* ]]; then
-            MAJOR=`echo $VERSION | cut -d. -f1`
-            MINOR=`echo $VERSION | cut -d. -f2`
-
-            TAGS="$TAGS --tag ${DOCKER_IMAGE}:latest"
-            TAGS="$TAGS --tag ${DOCKER_IMAGE}:$MAJOR"
-            TAGS="$TAGS --tag ${DOCKER_IMAGE}:$MAJOR.$MINOR"
-
+            TAGS="$TAGS,erseco/${REPO_NAME}:latest"
           fi
           if [[ $VERSION = "master" ]]; then
-            TAGS="$TAGS --tag ${DOCKER_IMAGE}:beta"
+            TAGS="$TAGS,erseco/${REPO_NAME}:beta"
           fi
 
-          echo ::set-output name=docker_image::${DOCKER_IMAGE}
-          echo ::set-output name=version::${VERSION}
-          echo ::set-output name=buildx_args::--platform ${DOCKER_PLATFORMS} \
-            --build-arg VERSION=${VERSION} \
-            --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
-            --build-arg VCS_REF=${GITHUB_SHA::8} \
-            ${TAGS} .
-          echo ::set-output name=tags::${TAGS}
           echo ::set-output name=platforms::${DOCKER_PLATFORMS}
+          echo ::set-output name=tags::${TAGS}
 
       - name: Set up QEMU
         id: qemu
