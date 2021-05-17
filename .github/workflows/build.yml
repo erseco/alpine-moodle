@@ -18,13 +18,13 @@ jobs:
           DOCKER_PLATFORMS=linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/386,linux/ppc64le,linux/s390x
 
           VERSION=${GITHUB_REF#refs/*/}
-          TAGS="erseco/${REPO_NAME}:${VERSION}"
+          TAGS="${DOCKER_IMAGE}:${VERSION}"
 
           if [[ $GITHUB_REF == refs/tags/* ]]; then
-            TAGS="$TAGS,erseco/${REPO_NAME}:latest"
+            TAGS="$TAGS,${DOCKER_IMAGE}:latest"
           fi
           if [[ $VERSION = "master" ]]; then
-            TAGS="$TAGS,erseco/${REPO_NAME}:beta"
+            TAGS="$TAGS,${DOCKER_IMAGE}:beta"
           fi
 
           echo ::set-output name=platforms::${DOCKER_PLATFORMS}
