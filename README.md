@@ -1,8 +1,8 @@
 [![Docker Pulls](https://img.shields.io/docker/pulls/erseco/alpine-moodle.svg)](https://hub.docker.com/r/erseco/alpine-moodle/)
 [![Docker image layers](https://images.microbadger.com/badges/image/erseco/alpine-moodle.svg)](https://microbadger.com/images/erseco/alpine-moodle)
-![nginx 1.18.0](https://img.shields.io/badge/nginx-1.18-brightgreen.svg)
+![nginx 1.20.1](https://img.shields.io/badge/nginx-1.18-brightgreen.svg)
 ![php 8.0](https://img.shields.io/badge/php-8.0-brightgreen.svg)
-![moodle-3.11.0](https://img.shields.io/badge/moodle-3.11.0-yellow)
+![moodle-3.11.3](https://img.shields.io/badge/moodle-3.11.3-yellow)
 ![License MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 
 # Moodle on Alpine Linux
@@ -58,7 +58,7 @@ Define the ENV variables in docker-compose.yml file
 | SMTP_HOST                   | smtp.gmail.com       |                                                                          |
 | SMTP_PORT                   | 587                  |                                                                          |
 | SMTP_USER                   | your_email@gmail.com |                                                                          |
-| SMTP_PASSWORD               | your_password        |                                                                          |
+| SMTP_PASSWORD               | your_password        |                                                                          |
 | SMTP_PROTOCOL               | tls                  |                                                                          |
 | MOODLE_MAIL_NOREPLY_ADDRESS | noreply@localhost    |                                                                          |
 | MOODLE_MAIL_PREFIX          | [moodle]             |                                                                          |
