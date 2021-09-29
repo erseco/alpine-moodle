@@ -44,6 +44,9 @@ if [ ! -f /var/www/html/config.php ]; then
         sed -i '/require_once/i $CFG->sslproxy=true;' /var/www/html/config.php
     fi
 
+    # Avoid allowing executable paths to be set via the Admin GUI
+    echo "\$CFG->preventexecpath = true;" >> /var/www/html/config.php
+
 fi
 
 # Check if the database is already installed
@@ -76,6 +79,15 @@ if php -d max_input_vars=1000 /var/www/html/admin/cli/isinstalled.php ; then
     php -d max_input_vars=1000 /var/www/html/admin/cli/cfg.php --name=smtpsecure --set=$SMTP_PROTOCOL
     php -d max_input_vars=1000 /var/www/html/admin/cli/cfg.php --name=noreplyaddress --set=$MOODLE_MAIL_NOREPLY_ADDRESS
     php -d max_input_vars=1000 /var/www/html/admin/cli/cfg.php --name=emailsubjectprefix --set=$MOODLE_MAIL_PREFIX
+    
+    # Remove .swf (flash) plugin for security reasons DISABLED BECAUSE IS REQUIRED
+    #php -d max_input_vars=1000 /var/www/html/admin/cli/uninstall_plugins.php --plugins=media_swf --run
+
+    # Avoid writing the config file
+    chmod 444 config.php
+
+    # Fix publicpaths check to point to the internal container on port 8080
+    sed -i 's/wwwroot/wwwroot\ \. \"\:8080\"/g' lib/classes/check/environment/publicpaths.php
 
 else
     echo "Upgrading moodle..."
@@ -83,16 +95,3 @@ else
     php -d max_input_vars=1000 /var/www/html/admin/cli/upgrade.php --non-interactive --allow-unstable
     php -d max_input_vars=1000 /var/www/html/admin/cli/maintenance.php --disable
 fi
-
-
-
-
-
-
-
-
-
-
-
-
-

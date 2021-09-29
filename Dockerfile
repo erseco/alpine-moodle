@@ -14,7 +14,7 @@ RUN apk add --no-cache dcron libcap && \
 
 USER nobody
 
-# Change MOODLE_38_STABLE for new versions
+# Change MOODLE_311_STABLE for new versions
 ENV MOODLE_URL=https://github.com/moodle/moodle/archive/MOODLE_311_STABLE.tar.gz \
     LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
