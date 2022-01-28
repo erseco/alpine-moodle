@@ -4,7 +4,7 @@
 ![Docker Image Size](https://img.shields.io/docker/image-size/erseco/alpine-moodle)
 ![nginx 1.18.0](https://img.shields.io/badge/nginx-1.18-brightgreen.svg)
 ![php 7.3](https://img.shields.io/badge/php-7.3-brightgreen.svg)
-![moodle-3.11.4](https://img.shields.io/badge/moodle-3.11.4-yellow)
+![moodle-3.11.5+](https://img.shields.io/badge/moodle-3.11.5-yellow)
 ![License MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 
 Moodle setup for Docker, build on [Alpine Linux](http://www.alpinelinux.org/).
