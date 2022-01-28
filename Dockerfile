@@ -8,7 +8,7 @@ COPY --chown=nobody rootfs/ /
 
 # crond needs root, so install dcron and cap package and set the capabilities
 # on dcron binary https://github.com/inter169/systs/blob/master/alpine/crond/README.md
-RUN apk add --no-cache dcron libcap && \
+RUN apk add --no-cache dcron libcap php8-sodium php8-exif && \
     chown nobody:nobody /usr/sbin/crond && \
     setcap cap_setgid=ep /usr/sbin/crond
 
@@ -42,7 +42,7 @@ ENV MOODLE_URL=https://github.com/moodle/moodle/archive/MOODLE_311_STABLE.tar.gz
     client_max_body_size=50M \
     post_max_size=50M \
     upload_max_filesize=50M \
-    max_input_vars=1000
+    max_input_vars=5000
 
 RUN curl --location $MOODLE_URL | tar xz --strip-components=1 -C /var/www/html/
 

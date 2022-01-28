@@ -63,6 +63,7 @@ if php8 -d max_input_vars=10000 /var/www/html/admin/cli/isinstalled.php ; then
         --agree-license
 
     echo "Configuring settings..."
+
     # php8 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=slasharguments --set=0
     php8 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=pathtophp --set=/usr/bin/php
     php8 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=pathtodu --set=/usr/bin/du

@@ -23,7 +23,7 @@ jobs:
           if [[ $GITHUB_REF == refs/tags/* ]]; then
             TAGS="$TAGS,${DOCKER_IMAGE}:latest"
           fi
-          if [[ $VERSION = "master" ]]; then
+          if [[ $VERSION == "master" ]]; then
             TAGS="$TAGS,${DOCKER_IMAGE}:beta"
           fi
 
