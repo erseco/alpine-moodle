@@ -38,7 +38,8 @@ if [ ! -f /var/www/html/config.php ]; then
         --adminemail=$MOODLE_EMAIL \
         --non-interactive \
         --agree-license \
-        --skip-database
+        --skip-database \
+        --allow-unstable
 
     if [ "$SSLPROXY" = 'true' ]; then
         sed -i '/require_once/i $CFG->sslproxy=true;' /var/www/html/config.php
