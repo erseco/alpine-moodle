@@ -2,9 +2,9 @@
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/erseco/alpine-moodle.svg)](https://hub.docker.com/r/erseco/alpine-moodle/)
 ![Docker Image Size](https://img.shields.io/docker/image-size/erseco/alpine-moodle)
-![nginx 1.18.0](https://img.shields.io/badge/nginx-1.18-brightgreen.svg)
-![php 7.3](https://img.shields.io/badge/php-7.3-brightgreen.svg)
-![moodle-3.11.6+](https://img.shields.io/badge/moodle-3.11.6-yellow)
+![nginx 1.20.1](https://img.shields.io/badge/nginx-1.18-brightgreen.svg)
+![php 8.0](https://img.shields.io/badge/php-8.0-brightgreen.svg)
+![moodle-4.0](https://img.shields.io/badge/moodle-4.0-yellow)
 ![License MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 
 Moodle setup for Docker, build on [Alpine Linux](http://www.alpinelinux.org/).
@@ -12,9 +12,10 @@ The image is only +/- 70MB large.
 
 Repository: https://github.com/erseco/alpine-moodle
 
-* Built on the lightweight image https://github.com/erseco/alpine-php7-webserver
+
+* Built on the lightweight image https://github.com/erseco/alpine-php-webserver
 * Very small Docker image size (+/-70MB)
-* Uses PHP 7.3 for better performance, lower cpu usage & memory footprint
+* Uses PHP 8.0 for better performance, lower cpu usage & memory footprint
 * Multi-arch support: 386, amd64, arm/v6, arm/v7, arm64, ppc64le, s390x
 * Optimized for 100 concurrent users
 * Optimized to only use resources when there's traffic (by using PHP-FPM's ondemand PM)
@@ -58,11 +59,11 @@ Define the ENV variables in docker-compose.yml file
 | SMTP_HOST                   | smtp.gmail.com       |                                                                          |
 | SMTP_PORT                   | 587                  |                                                                          |
 | SMTP_USER                   | your_email@gmail.com |                                                                          |
-| SMTP_PASSWORD               | your_password        |                                                                          |
+| SMTP_PASSWORD               | your_password        |                                                                          |
 | SMTP_PROTOCOL               | tls                  |                                                                          |
 | MOODLE_MAIL_NOREPLY_ADDRESS | noreply@localhost    |                                                                          |
 | MOODLE_MAIL_PREFIX          | [moodle]             |                                                                          |
 | client_max_body_size        | 50M                  |                                                                          |
 | post_max_size               | 50M                  |                                                                          |
 | upload_max_filesize         | 50M                  |                                                                          |
-| max_input_vars              | 1000                 |                                                                          |
+| max_input_vars              | 5000                 |                                                                          |

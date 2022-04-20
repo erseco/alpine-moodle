@@ -1,5 +1,5 @@
 ARG ARCH=
-FROM ${ARCH}erseco/alpine-php7-webserver
+FROM ${ARCH}erseco/alpine-php-webserver
 
 LABEL maintainer="Ernesto Serrano <info@ernesto.es>"
 
@@ -8,14 +8,14 @@ COPY --chown=nobody rootfs/ /
 
 # crond needs root, so install dcron and cap package and set the capabilities
 # on dcron binary https://github.com/inter169/systs/blob/master/alpine/crond/README.md
-RUN apk add --no-cache dcron libcap php7-sodium php7-xmlrpc php7-exif && \
+RUN apk add --no-cache dcron libcap php8-sodium php8-exif && \
     chown nobody:nobody /usr/sbin/crond && \
     setcap cap_setgid=ep /usr/sbin/crond
 
 USER nobody
 
-# Change MOODLE_311_STABLE for new versions
-ENV MOODLE_URL=https://github.com/moodle/moodle/archive/MOODLE_311_STABLE.tar.gz \
+# Change MOODLE_XX_STABLE for new versions
+ENV MOODLE_URL=https://github.com/moodle/moodle/archive/MOODLE_400_STABLE.tar.gz \
     LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
     SITE_URL=http://localhost \
