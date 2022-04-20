@@ -15,7 +15,7 @@ RUN apk add --no-cache dcron libcap php8-sodium php8-exif && \
 USER nobody
 
 # Change MOODLE_XX_STABLE for new versions
-ENV MOODLE_URL=https://github.com/moodle/moodle/archive/master.tar.gz \
+ENV MOODLE_URL=https://github.com/moodle/moodle/archive/MOODLE_400_STABLE.tar.gz \
     LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
     SITE_URL=http://localhost \
