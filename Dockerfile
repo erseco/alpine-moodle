@@ -8,7 +8,7 @@ COPY --chown=nobody rootfs/ /
 
 # crond needs root, so install dcron and cap package and set the capabilities
 # on dcron binary https://github.com/inter169/systs/blob/master/alpine/crond/README.md
-RUN apk add --no-cache dcron libcap php8-sodium php8-exif && \
+RUN apk add --no-cache dcron libcap php81-sodium php81-exif && \
     chown nobody:nobody /usr/sbin/crond && \
     setcap cap_setgid=ep /usr/sbin/crond
 
@@ -35,7 +35,7 @@ ENV MOODLE_URL=https://github.com/moodle/moodle/archive/MOODLE_400_STABLE.tar.gz
     SMTP_HOST=smtp.gmail.com \
     SMTP_PORT=587 \
     SMTP_USER=your_email@gmail.com \
-    SMTP_PASSWORD=your_password \
+    SMTP_PASSWORD=your_password \
     SMTP_PROTOCOL=tls \
     MOODLE_MAIL_NOREPLY_ADDRESS=noreply@localhost \
     MOODLE_MAIL_PREFIX=[moodle] \
