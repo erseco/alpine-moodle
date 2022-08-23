@@ -12,6 +12,8 @@ RUN apk add --no-cache dcron libcap php8-sodium php8-exif && \
     chown nobody:nobody /usr/sbin/crond && \
     setcap cap_setgid=ep /usr/sbin/crond
 
+RUN ln -s /usr/bin/php8 /usr/bin/php
+
 USER nobody
 
 # Change MOODLE_XX_STABLE for new versions
