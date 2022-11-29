@@ -35,7 +35,7 @@ services:
       - SMTP_HOST=smtp.gmail.com
       - SMTP_PORT=587
       - SMTP_USER=your_email@gmail.com
-      - SMTP_PASSWORD=your_password \
+      - SMTP_PASSWORD=your_password
       - SMTP_PROTOCOL=tls
       - MOODLE_MAIL_NOREPLY_ADDRESS=noreply@localhost
       - MOODLE_MAIL_PREFIX=[moodle]
