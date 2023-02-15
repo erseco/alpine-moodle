@@ -27,6 +27,7 @@ ENV MOODLE_URL=https://github.com/moodle/moodle/archive/MOODLE_401_STABLE.tar.gz
     DB_PASS=moodle \
     DB_PREFIX=mdl_ \
     SSLPROXY=false \
+    MY_CERTIFICATES=none \
     MOODLE_EMAIL=user@example.com \
     MOODLE_LANGUAGE=en \
     MOODLE_SITENAME=New-Site \
