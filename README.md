@@ -16,6 +16,7 @@ Repository: https://github.com/erseco/alpine-moodle
 * Built on the lightweight image https://github.com/erseco/alpine-php-webserver
 * Very small Docker image size (+/-70MB)
 * Uses PHP 8.0 for better performance, lower cpu usage & memory footprint
+* Support for HA installations: php-redis, php-ldap(also with self-signed certs)
 * Multi-arch support: 386, amd64, arm/v6, arm/v7, arm64, ppc64le, s390x
 * Optimized for 100 concurrent users
 * Optimized to only use resources when there's traffic (by using PHP-FPM's ondemand PM)
@@ -51,6 +52,7 @@ Define the ENV variables in docker-compose.yml file
 | DB_NAME                     | moodle               |                                                                          |
 | DB_USER                     | moodle               |                                                                          |
 | DB_PREFIX                   | mdl_                 | Database prefix. WARNING: don't use numeric values or moodle won't start |
+| MY_CERTIFICATES             | none                 | Trusted LDAP certificate or chain getting through base64 encode          |
 | MOODLE_EMAIL                | user@example.com     |                                                                          |
 | MOODLE_LANGUAGE             | en                   |                                                                          |
 | MOODLE_SITENAME             | New-Site             |                                                                          |
