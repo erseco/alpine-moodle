@@ -52,7 +52,7 @@ Define the ENV variables in docker-compose.yml file
 | DB_NAME                     | moodle               |                                                                          |
 | DB_USER                     | moodle               |                                                                          |
 | DB_PREFIX                   | mdl_                 | Database prefix. WARNING: don't use numeric values or moodle won't start |
-| MY_CERTIFICATES             | none                 | Certificate or chain getting through base64 encode                       |
+| MY_CERTIFICATES             | none                 | Trusted LDAP certificate or chain getting through base64 encode          |
 | MOODLE_EMAIL                | user@example.com     |                                                                          |
 | MOODLE_LANGUAGE             | en                   |                                                                          |
 | MOODLE_SITENAME             | New-Site             |                                                                          |
