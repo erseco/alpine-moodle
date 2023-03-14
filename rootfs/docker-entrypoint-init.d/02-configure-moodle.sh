@@ -5,16 +5,21 @@
 set -eo pipefail
 
 # Check that the database is available
-echo "Waiting for $database:$port to be ready"
+echo "Waiting for database to be ready..."
 while ! nc -w 1 $DB_HOST $DB_PORT; do
     # Show some progress
     echo -n '.';
     sleep 1;
 done
-echo "$database is ready"
+echo -e "\n\nGreat, "$DB_HOST" is ready!"
 # Give it another 3 seconds.
 sleep 3;
 
+#Add trusted certificates to "ldap-truststore"
+if [ "$MY_CERTIFICATES" != 'none' ]; then
+    echo "Adding certificates to truststore..."
+    echo "$MY_CERTIFICATES" | base64 -d > /etc/openldap/my-certificates/extra.pem
+fi
 
 # Check if the config.php file exists
 if [ ! -f /var/www/html/config.php ]; then
