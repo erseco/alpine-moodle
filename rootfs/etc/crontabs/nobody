@@ -1,2 +1,2 @@
 
-* * * * * /usr/bin/php8  /var/www/html/admin/cli/cron.php > /dev/null
+* * * * * /usr/bin/php81  /var/www/html/admin/cli/cron.php > /dev/null

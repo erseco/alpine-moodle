@@ -3,8 +3,8 @@
 [![Docker Pulls](https://img.shields.io/docker/pulls/erseco/alpine-moodle.svg)](https://hub.docker.com/r/erseco/alpine-moodle/)
 ![Docker Image Size](https://img.shields.io/docker/image-size/erseco/alpine-moodle)
 ![nginx 1.20.2](https://img.shields.io/badge/nginx-1.18-brightgreen.svg)
-![php 8.0](https://img.shields.io/badge/php-8.0-brightgreen.svg)
-![moodle-4.1.1](https://img.shields.io/badge/moodle-4.1.1-yellow)
+![php 8.1](https://img.shields.io/badge/php-8.1-brightgreen.svg)
+![moodle-4.1.2](https://img.shields.io/badge/moodle-4.1.2-yellow)
 ![License MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 
 Moodle setup for Docker, build on [Alpine Linux](http://www.alpinelinux.org/).
@@ -15,7 +15,7 @@ Repository: https://github.com/erseco/alpine-moodle
 
 * Built on the lightweight image https://github.com/erseco/alpine-php-webserver
 * Very small Docker image size (+/-70MB)
-* Uses PHP 8.0 for better performance, lower cpu usage & memory footprint
+* Uses PHP 8.1 for better performance, lower cpu usage & memory footprint
 * Multi-arch support: 386, amd64, arm/v6, arm/v7, arm64, ppc64le, s390x
 * Optimized for 100 concurrent users
 * Optimized to only use resources when there's traffic (by using PHP-FPM's ondemand PM)
