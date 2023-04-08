@@ -12,6 +12,10 @@ RUN apk add --no-cache dcron libcap php81-sodium php81-exif php81-pecl-redis php
     chown nobody:nobody /usr/sbin/crond && \
     setcap cap_setgid=ep /usr/sbin/crond
 
+# add a quick-and-dirty hack  to fix https://github.com/erseco/alpine-moodle/issues/26
+RUN apk add gnu-libiconv=1.15-r3 --update-cache --repository http://dl-cdn.alpinelinux.org/alpine/v3.13/community/ --allow-untrusted
+ENV LD_PRELOAD /usr/lib/preloadable_libiconv.so
+
 USER nobody
 
 # Change MOODLE_XX_STABLE for new versions
