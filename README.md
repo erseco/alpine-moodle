@@ -15,18 +15,14 @@ Repository: https://github.com/erseco/alpine-moodle
 
 * Built on the lightweight image https://github.com/erseco/alpine-php-webserver
 * Very small Docker image size (+/-70MB)
-<<<<<<< HEAD
 * Uses PHP 8.1 for better performance, lower cpu usage & memory footprint
-=======
-* Uses PHP 8.0 for better performance, lower cpu usage & memory footprint
 * Support for HA installations: php-redis, php-ldap(also with self-signed certs)
->>>>>>> 3e0655101da0c7522195f026e97d24b3e1ced22e
 * Multi-arch support: 386, amd64, arm/v6, arm/v7, arm64, ppc64le, s390x
 * Optimized for 100 concurrent users
 * Optimized to only use resources when there's traffic (by using PHP-FPM's ondemand PM)
 * Use of runit instead of supervisord to reduce memory footprint
 * Configured cron to run as non-privileged user https://github.com/gliderlabs/docker-alpine/issues/381#issuecomment-621946699
-* docker-compose sample with PostgreSQL
+* docker-compose sample with PostgreSQL and [MailHog](https://github.com/mailhog/MailHog)
 * Configuration via ENV variables
 * Easily upgradable to new moodle versions
 * The servers Nginx, PHP-FPM run under a non-privileged user (nobody) to make it more secure
