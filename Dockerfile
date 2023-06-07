@@ -30,6 +30,7 @@ ENV MOODLE_URL=https://github.com/moodle/moodle/archive/MOODLE_402_STABLE.tar.gz
     DB_USER=moodle \
     DB_PASS=moodle \
     DB_PREFIX=mdl_ \
+    DB_DBHANDLEOPTIONS=false \
     SSLPROXY=false \
     MY_CERTIFICATES=none \
     MOODLE_EMAIL=user@example.com \
