@@ -132,8 +132,12 @@ if php81 -d max_input_vars=10000 /var/www/html/admin/cli/isinstalled.php ; then
     sed -i 's/wwwroot/wwwroot\ \. \"\:8080\"/g' lib/classes/check/environment/publicpaths.php
 
 else
-    echo "Upgrading moodle..."
-    php81 -d max_input_vars=10000 /var/www/html/admin/cli/maintenance.php --enable
-    php81 -d max_input_vars=10000 /var/www/html/admin/cli/upgrade.php --non-interactive --allow-unstable
-    php81 -d max_input_vars=10000 /var/www/html/admin/cli/maintenance.php --disable
+    if [ -z "$AUTO_UPDATE_MOODLE" ] || [ "$AUTO_UPDATE_MOODLE" = true ]; then
+        echo "Upgrading moodle..."
+        php81 -d max_input_vars=10000 /var/www/html/admin/cli/maintenance.php --enable
+        php81 -d max_input_vars=10000 /var/www/html/admin/cli/upgrade.php --non-interactive --allow-unstable
+        php81 -d max_input_vars=10000 /var/www/html/admin/cli/maintenance.php --disable
+    else
+        echo "Skipped auto update of Moodle"
+    fi
 fi
