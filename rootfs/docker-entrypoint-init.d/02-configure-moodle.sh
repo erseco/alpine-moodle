@@ -12,6 +12,26 @@ while ! nc -w 1 $DB_HOST $DB_PORT; do
     sleep 1;
 done
 echo -e "\n\nGreat, "$DB_HOST" is ready!"
+
+# Check that the database replica is available
+if [ -n "$DB_HOST_REPLICA" ]; then
+    if [ -n "$DB_PORT_REPLICA" ]; then
+        echo "Waiting for $DB_HOST_REPLICA:$DB_PORT_REPLICA to be ready"
+        while ! nc -w 1 "$DB_HOST_REPLICA" "$DB_PORT_REPLICA"; do
+            # Show some progress
+            echo -n '.';
+            sleep 1;
+        done
+    else
+        echo "Waiting for $DB_HOST_REPLICA:$DB_PORT to be ready"
+        while ! nc -w 1 "$DB_HOST_REPLICA" "$DB_PORT"; do
+            # Show some progress
+            echo -n '.';
+            sleep 1;
+        done
+    fi
+    echo "$DB_HOST_REPLICA is ready"
+fi
 # Give it another 3 seconds.
 sleep 3;
 
@@ -45,6 +65,21 @@ if [ ! -f /var/www/html/config.php ]; then
         --agree-license \
         --skip-database \
         --allow-unstable
+
+    # Set extra database settings
+    if [ -n "$DB_FETCHBUFFERSIZE" ]; then
+        sed -i "/\$CFG->dboptions/a \ \ "\''fetchbuffersize'\'" => $DB_FETCHBUFFERSIZE," /var/www/html/config.php
+    fi
+    if [ "$DB_DBHANDLEOPTIONS" = 'true' ]; then
+        sed -i "/\$CFG->dboptions/a \ \ "\''dbhandlesoptions'\'" => true," /var/www/html/config.php
+    fi
+    if [ -n "$DB_HOST_REPLICA" ]; then
+        if [ -n "$DB_USER_REPLICA" ] && [ -n "$DB_PASS_REPLICA" ] && [ -n "$DB_PORT_REPLICA" ]; then
+            sed -i "/\$CFG->dboptions/a \ \ "\''readonly'\'" => [ \'instance\' => [ \'dbhost\' => \'$DB_HOST_REPLICA\', \'dbport\' => \'$DB_PORT_REPLICA\', \'dbuser\' => \'$DB_USER_REPLICA\', \'dbpass\' => \'$DB_PASS_REPLICA\' ] ]," /var/www/html/config.php
+        else
+            sed -i "/\$CFG->dboptions/a \ \ "\''readonly'\'" => [ \'instance\' => [ \'$DB_HOST_REPLICA\' ] ]," /var/www/html/config.php
+        fi
+    fi
 
     if [ "$SSLPROXY" = 'true' ]; then
         sed -i '/require_once/i $CFG->sslproxy=true;' /var/www/html/config.php
@@ -97,8 +132,12 @@ if php81 -d max_input_vars=10000 /var/www/html/admin/cli/isinstalled.php ; then
     sed -i 's/wwwroot/wwwroot\ \. \"\:8080\"/g' lib/classes/check/environment/publicpaths.php
 
 else
-    echo "Upgrading moodle..."
-    php81 -d max_input_vars=10000 /var/www/html/admin/cli/maintenance.php --enable
-    php81 -d max_input_vars=10000 /var/www/html/admin/cli/upgrade.php --non-interactive --allow-unstable
-    php81 -d max_input_vars=10000 /var/www/html/admin/cli/maintenance.php --disable
+    if [ -z "$AUTO_UPDATE_MOODLE" ] || [ "$AUTO_UPDATE_MOODLE" = true ]; then
+        echo "Upgrading moodle..."
+        php81 -d max_input_vars=10000 /var/www/html/admin/cli/maintenance.php --enable
+        php81 -d max_input_vars=10000 /var/www/html/admin/cli/upgrade.php --non-interactive --allow-unstable
+        php81 -d max_input_vars=10000 /var/www/html/admin/cli/maintenance.php --disable
+    else
+        echo "Skipped auto update of Moodle"
+    fi
 fi
