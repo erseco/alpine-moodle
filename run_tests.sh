@@ -12,4 +12,4 @@ echo "moodle is ready"
 # Give it another 3 seconds.
 sleep 3;
 
-curl --silent --fail http://app:8080 | grep '<title>Dockerized_Moodle</title>'
+curl --silent --fail http://app:8080 | grep '<title>Home | moodle</title>'
