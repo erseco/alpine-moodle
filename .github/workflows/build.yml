@@ -34,9 +34,6 @@ jobs:
           if [[ $VERSION == "master" ]]; then
             GHCR_TAGS="$GHCR_TAGS,${GHCR_IMAGE}:beta"
           fi          
-          echo ::set-output name=platforms::${DOCKER_PLATFORMS}
-          echo ::set-output name=tags::${TAGS}
-          echo ::set-output name=ghcr-tags::${GHCR_TAGS}
 
       # Step 3: Set up QEMU for multi-platform builds
       - name: Set up QEMU
