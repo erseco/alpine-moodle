@@ -19,27 +19,25 @@ jobs:
           GHCR_IMAGE=ghcr.io/${GITHUB_REPOSITORY}
           DOCKER_PLATFORMS=linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/386,linux/ppc64le,linux/s390x
 
-          VERSION=${GITHUB_REF#refs/*/}
+          VERSION=$(echo ${GITHUB_REF#refs/*/} | sed 's/\//-/g') # Replace / with - in tag name
           TAGS="${GITHUB_REPOSITORY}:${VERSION}"
 
           if [[ $GITHUB_REF == refs/tags/* ]]; then
             TAGS="$TAGS,${GITHUB_REPOSITORY}:latest"
-          fi
-          if [[ $VERSION == "master" ]]; then
+          elif [[ $VERSION == "master" ]]; then
             TAGS="$TAGS,${GITHUB_REPOSITORY}:beta"
           fi
 
           GHCR_TAGS="${GHCR_IMAGE}:${VERSION}"
           if [[ $GITHUB_REF == refs/tags/* ]]; then
             GHCR_TAGS="$GHCR_TAGS,${GHCR_IMAGE}:latest"
-          fi
-          if [[ $VERSION == "master" ]]; then
+          elif [[ $VERSION == "master" ]]; then
             GHCR_TAGS="$GHCR_TAGS,${GHCR_IMAGE}:beta"
           fi
 
-          echo ::set-output name=platforms::${DOCKER_PLATFORMS}
-          echo ::set-output name=tags::${TAGS}
-          echo ::set-output name=ghcr-tags::${GHCR_TAGS}
+          echo "platforms=${DOCKER_PLATFORMS}" >> $GITHUB_OUTPUT
+          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
+          echo "ghcr-tags=${GHCR_TAGS}" >> $GITHUB_OUTPUT
 
       # Step 3: Set up QEMU for multi-platform builds
       - name: Set up QEMU
