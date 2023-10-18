@@ -16,17 +16,17 @@ jobs:
       - name: Prepare
         id: prepare
         run: |
-          GHCR_IMAGE=ghcr.io/${{ github.repository_owner }}/${REPO_NAME}
+          GHCR_IMAGE=ghcr.io/${GITHUB_REPOSITORY}
           DOCKER_PLATFORMS=linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/386,linux/ppc64le,linux/s390x
 
           VERSION=${GITHUB_REF#refs/*/}
-          TAGS="erseco/${REPO_NAME}:${VERSION}"
+          TAGS="${GITHUB_REPOSITORY}:${VERSION}"
 
           if [[ $GITHUB_REF == refs/tags/* ]]; then
-            TAGS="$TAGS,erseco/${REPO_NAME}:latest"
+            TAGS="$TAGS,${GITHUB_REPOSITORY}:latest"
           fi
           if [[ $VERSION == "master" ]]; then
-            TAGS="$TAGS,erseco/${REPO_NAME}:beta"
+            TAGS="$TAGS,${GITHUB_REPOSITORY}:beta"
           fi
 
           GHCR_TAGS="${GHCR_IMAGE}:${VERSION}"
@@ -35,7 +35,7 @@ jobs:
           fi
           if [[ $VERSION == "master" ]]; then
             GHCR_TAGS="$GHCR_TAGS,${GHCR_IMAGE}:beta"
-          fi 
+          fi
 
           echo ::set-output name=platforms::${DOCKER_PLATFORMS}
           echo ::set-output name=tags::${TAGS}
