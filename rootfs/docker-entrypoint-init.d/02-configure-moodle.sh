@@ -4,46 +4,48 @@
 #
 set -eo pipefail
 
-# Check that the database is available
-echo "Waiting for database to be ready..."
-while ! nc -w 1 $DB_HOST $DB_PORT; do
-    # Show some progress
-    echo -n '.';
-    sleep 1;
-done
-echo -e "\n\nGreat, "$DB_HOST" is ready!"
+# Path to the config.php file
+config_file="/var/www/html/config.php"
 
-# Check that the database replica is available
-if [ -n "$DB_HOST_REPLICA" ]; then
-    if [ -n "$DB_PORT_REPLICA" ]; then
-        echo "Waiting for $DB_HOST_REPLICA:$DB_PORT_REPLICA to be ready"
-        while ! nc -w 1 "$DB_HOST_REPLICA" "$DB_PORT_REPLICA"; do
-            # Show some progress
-            echo -n '.';
-            sleep 1;
-        done
+# Function to update or add a configuration value
+update_or_add_config_value() {
+    local key="$1"  # The configuration key (e.g., $CFG->wwwroot)
+    local value="$2"  # The new value for the configuration key
+    
+    if [[ "$value" == 'true' || "$value" == 'false' ]]; then
+        # Handle boolean values without quotes
+        quote=''
     else
-        echo "Waiting for $DB_HOST_REPLICA:$DB_PORT to be ready"
-        while ! nc -w 1 "$DB_HOST_REPLICA" "$DB_PORT"; do
-            # Show some progress
-            echo -n '.';
-            sleep 1;
-        done
+        # Other values get single-quoted
+        quote="'"
     fi
-    echo "$DB_HOST_REPLICA is ready"
-fi
-# Give it another 3 seconds.
-sleep 3;
 
-#Add trusted certificates to "ldap-truststore"
-if [ "$MY_CERTIFICATES" != 'none' ]; then
-    echo "Adding certificates to truststore..."
-    echo "$MY_CERTIFICATES" | base64 -d > /etc/openldap/my-certificates/extra.pem
-fi
+    if grep -q "$key" "$config_file"; then
+        # If the key exists, replace its value
+        sed -i "s|\($key\s*=\s*\)[^;]*;|\1$quote$value$quote;|g" "$config_file"
+    else
+        # If the key does not exist, add it before "require_once"
+        sed -i "/require_once/i $key\t= $quote$value$quote;" "$config_file"
+    fi
+}
 
-# Check if the config.php file exists
-if [ ! -f /var/www/html/config.php ]; then
+# Function to check the availability of a database
+check_db_availability() {
+    local db_host="$1"
+    local db_port="$2"
+    local db_name="$3"
+    
+    echo "Waiting for $db_host:$db_port to be ready..."
+    while ! nc -w 1 "$db_host" "$db_port"; do
+        # Show some progress
+        echo -n '.'
+        sleep 1
+    done
+    echo -e "\n\nGreat, $db_host is ready!"
+}
 
+# Function to generate config.php file
+generate_config_file() {
     echo "Generating config.php file..."
     ENV_VAR='var' php82 -d max_input_vars=10000 /var/www/html/admin/cli/install.php \
         --lang=$MOODLE_LANGUAGE \
@@ -65,34 +67,10 @@ if [ ! -f /var/www/html/config.php ]; then
         --agree-license \
         --skip-database \
         --allow-unstable
+}
 
-    # Set extra database settings
-    if [ -n "$DB_FETCHBUFFERSIZE" ]; then
-        sed -i "/\$CFG->dboptions/a \ \ "\''fetchbuffersize'\'" => $DB_FETCHBUFFERSIZE," /var/www/html/config.php
-    fi
-    if [ "$DB_DBHANDLEOPTIONS" = 'true' ]; then
-        sed -i "/\$CFG->dboptions/a \ \ "\''dbhandlesoptions'\'" => true," /var/www/html/config.php
-    fi
-    if [ -n "$DB_HOST_REPLICA" ]; then
-        if [ -n "$DB_USER_REPLICA" ] && [ -n "$DB_PASS_REPLICA" ] && [ -n "$DB_PORT_REPLICA" ]; then
-            sed -i "/\$CFG->dboptions/a \ \ "\''readonly'\'" => [ \'instance\' => [ \'dbhost\' => \'$DB_HOST_REPLICA\', \'dbport\' => \'$DB_PORT_REPLICA\', \'dbuser\' => \'$DB_USER_REPLICA\', \'dbpass\' => \'$DB_PASS_REPLICA\' ] ]," /var/www/html/config.php
-        else
-            sed -i "/\$CFG->dboptions/a \ \ "\''readonly'\'" => [ \'instance\' => [ \'$DB_HOST_REPLICA\' ] ]," /var/www/html/config.php
-        fi
-    fi
-
-    if [ "$SSLPROXY" = 'true' ]; then
-        sed -i '/require_once/i $CFG->sslproxy=true;' /var/www/html/config.php
-    fi
-
-    # Avoid allowing executable paths to be set via the Admin GUI
-    echo "\$CFG->preventexecpath = true;" >> /var/www/html/config.php
-
-fi
-
-# Check if the database is already installed
-if php82 -d max_input_vars=10000 /var/www/html/admin/cli/isinstalled.php ; then
-
+# Function to install the database
+install_database() {
     echo "Installing database..."
     php82 -d max_input_vars=10000 /var/www/html/admin/cli/install_database.php \
         --lang=$MOODLE_LANGUAGE \
@@ -102,41 +80,112 @@ if php82 -d max_input_vars=10000 /var/www/html/admin/cli/isinstalled.php ; then
         --fullname=Dockerized_Moodle \
         --shortname=moodle \
         --agree-license
+}
 
+# Function to set extra database settings
+set_extra_db_settings() {
+    if [ -n "$DB_FETCHBUFFERSIZE" ]; then
+        update_or_add_config_value "\$CFG->dboptions['fetchbuffersize']" "$DB_FETCHBUFFERSIZE"
+    fi
+    if [ "$DB_DBHANDLEOPTIONS" = 'true' ]; then
+        update_or_add_config_value "\$CFG->dboptions['dbhandlesoptions']" 'true'
+    fi
+    if [ -n "$DB_HOST_REPLICA" ]; then
+        if [ -n "$DB_USER_REPLICA" ] && [ -n "$DB_PASS_REPLICA" ] && [ -n "$DB_PORT_REPLICA" ]; then
+            update_or_add_config_value "\$CFG->dboptions['readonly']" "[ 'instance' => [ 'dbhost' => '$DB_HOST_REPLICA', 'dbport' => '$DB_PORT_REPLICA', 'dbuser' => '$DB_USER_REPLICA', 'dbpass' => '$DB_PASS_REPLICA' ] ]"
+        else
+            update_or_add_config_value "\$CFG->dboptions['readonly']" "[ 'instance' => [ '$DB_HOST_REPLICA' ] ]"
+        fi
+    fi
+}
+
+# Function to upgrade config.php
+upgrade_config_file() {
+    echo "Upgrading config.php..."
+    update_or_add_config_value "\$CFG->wwwroot" "$SITE_URL"
+    update_or_add_config_value "\$CFG->dbtype" "$DB_TYPE"
+    update_or_add_config_value "\$CFG->dbhost" "$DB_HOST"
+    update_or_add_config_value "\$CFG->dbname" "$DB_NAME"
+    update_or_add_config_value "\$CFG->dbuser" "$DB_USER"
+    update_or_add_config_value "\$CFG->dbpass" "$DB_PASS"
+    update_or_add_config_value "\$CFG->dbport" "$DB_PORT"
+    update_or_add_config_value "\$CFG->prefix" "$DB_PREFIX"
+    update_or_add_config_value "\$CFG->reverseproxy" "$REVERSEPROXY"
+    update_or_add_config_value "\$CFG->sslproxy" "$SSLPROXY"
+    update_or_add_config_value "\$CFG->preventexecpath" "true"
+}
+
+# Function to configure Moodle settings via CLI
+configure_moodle_settings() {
     echo "Configuring settings..."
-
-    # php82 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=slasharguments --set=0
     php82 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=pathtophp --set=/usr/bin/php82
     php82 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=pathtodu --set=/usr/bin/du
-    # php82 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=aspellpath --set=/usr/bin/aspell
-    # php82 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=pathtodot --set=/usr/bin/dot
-    # php82 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=pathtogs --set=/usr/bin/gs
-    # php82 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=pathtopython --set=/usr/bin/python3
     php82 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=enableblogs --set=0
+    php82 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtphosts --set="$SMTP_HOST:$SMTP_PORT"
+    php82 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtpuser --set="$SMTP_USER"
+    php82 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtppass --set="$SMTP_PASSWORD"
+    php82 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtpsecure --set="$SMTP_PROTOCOL"
+    php82 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=noreplyaddress --set="$MOODLE_MAIL_NOREPLY_ADDRESS"
+    php82 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=emailsubjectprefix --set="$MOODLE_MAIL_PREFIX"
+}
 
-
-    php82 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtphosts --set=$SMTP_HOST:$SMTP_PORT
-    php82 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtpuser --set=$SMTP_USER
-    php82 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtppass --set=$SMTP_PASSWORD
-    php82 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtpsecure --set=$SMTP_PROTOCOL
-    php82 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=noreplyaddress --set=$MOODLE_MAIL_NOREPLY_ADDRESS
-    php82 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=emailsubjectprefix --set=$MOODLE_MAIL_PREFIX
-    
-    # Remove .swf (flash) plugin for security reasons DISABLED BECAUSE IS REQUIRED
-    #php82 -d max_input_vars=10000 /var/www/html/admin/cli/uninstall_plugins.php --plugins=media_swf --run
-
+# Function to perform some final configurations
+final_configurations() {
     # Avoid writing the config file
     chmod 444 config.php
 
     # Fix publicpaths check to point to the internal container on port 8080
     sed -i 's/wwwroot/wwwroot\ \. \"\:8080\"/g' lib/classes/check/environment/publicpaths.php
+}
 
+# Function to upgrade Moodle
+upgrade_moodle() {
+    echo "Upgrading moodle..."
+    php82 -d max_input_vars=10000 /var/www/html/admin/cli/maintenance.php --enable
+    php82 -d max_input_vars=10000 /var/www/html/admin/cli/upgrade.php --non-interactive --allow-unstable
+    php82 -d max_input_vars=10000 /var/www/html/admin/cli/maintenance.php --disable
+}
+
+# Check the availability of the primary database
+check_db_availability "$DB_HOST" "$DB_PORT"
+
+# Check the availability of the database replica if specified
+if [ -n "$DB_HOST_REPLICA" ]; then
+    check_db_availability "$DB_HOST_REPLICA" "${DB_PORT_REPLICA:-$DB_PORT}"
+fi
+
+# Give it another 3 seconds.
+sleep 3
+
+# Add trusted certificates to "ldap-truststore" if specified
+if [ "$MY_CERTIFICATES" != 'none' ]; then
+    echo "Adding certificates to truststore..."
+    echo "$MY_CERTIFICATES" | base64 -d > /etc/openldap/my-certificates/extra.pem
+fi
+
+# Generate config.php file if it doesn't exist
+if [ ! -f "$config_file" ]; then
+    generate_config_file
+    set_extra_db_settings
+fi
+
+# Upgrade config.php file
+upgrade_config_file
+
+# Check if the database is already installed
+if php82 -d max_input_vars=10000 /var/www/html/admin/cli/isinstalled.php ; then
+    install_database
+    configure_moodle_settings
+    final_configurations
 else
+    configure_moodle_settings
+    echo "Upgrading admin user"
+    php82 -d max_input_vars=10000 /var/www/html/admin/cli/update_admin_user.php --username=$MOODLE_USERNAME --password=$MOODLE_PASSWORD --email=$MOODLE_EMAIL
     if [ -z "$AUTO_UPDATE_MOODLE" ] || [ "$AUTO_UPDATE_MOODLE" = true ]; then
-        echo "Upgrading moodle..."
-        php82 -d max_input_vars=10000 /var/www/html/admin/cli/maintenance.php --enable
-        php82 -d max_input_vars=10000 /var/www/html/admin/cli/upgrade.php --non-interactive --allow-unstable
-        php82 -d max_input_vars=10000 /var/www/html/admin/cli/maintenance.php --disable
+        
+        upgrade_moodle
+
+
     else
         echo "Skipped auto update of Moodle"
     fi

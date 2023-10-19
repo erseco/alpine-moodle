@@ -26,6 +26,7 @@ services:
       - DB_USER=moodle
       - DB_PASS=moodle
       - DB_PREFIX=mdl_
+      - REVERSEPROXY=false
       - SSLPROXY=false
       - MOODLE_EMAIL=user@example.com
       - MOODLE_LANGUAGE=en
