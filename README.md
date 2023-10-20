@@ -37,6 +37,14 @@ Start the Docker containers:
 
 Login on the system using the provided credentials (ENV vars)
 
+## Running Commands as Root
+
+In certain situations, you might need to run commands as `root` within your Moodle container, for example, to install additional packages. You can do this using the `docker-compose exec` command with the `--user root` option. Here's how:
+
+```bash
+docker-compose exec --user root moodle sh
+```
+
 ## Configuration
 Define the ENV variables in docker-compose.yml file
 
@@ -45,6 +53,7 @@ Define the ENV variables in docker-compose.yml file
 | LANG                        | en_US.UTF-8          |                                                                                                |
 | LANGUAGE                    | en_US:en             |                                                                                                |
 | SITE_URL                    | http://localhost     | Sets the public site url                                                                       |
+| REVERSEPROXY                | false                | Enable when setting up advanced reverse proxy |
 | SSLPROXY                    | false                | Disable SSL proxy to avoid site loop. Ej. Cloudfare                                            |
 | DB_TYPE                     | pgsql                | mysqli - pgsql - mariadb                                                                       |
 | DB_HOST                     | postgres             | DB_HOST Ej. db container name                                                                  |

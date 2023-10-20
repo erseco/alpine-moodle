@@ -31,6 +31,7 @@ ENV MOODLE_URL=https://github.com/moodle/moodle/archive/MOODLE_403_STABLE.tar.gz
     DB_PASS=moodle \
     DB_PREFIX=mdl_ \
     DB_DBHANDLEOPTIONS=false \
+    REVERSEPROXY=false \
     SSLPROXY=false \
     MY_CERTIFICATES=none \
     MOODLE_EMAIL=user@example.com \
