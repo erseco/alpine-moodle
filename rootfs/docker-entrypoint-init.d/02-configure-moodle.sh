@@ -66,7 +66,7 @@ generate_config_file() {
         --dbpass=$DB_PASS \
         --dbport=$DB_PORT \
         --prefix=$DB_PREFIX \
-        --fullname=Dockerized_Moodle \
+        --fullname=$MOODLE_SITENAME \
         --shortname=moodle \
         --adminuser=$MOODLE_USERNAME \
         --adminpass=$MOODLE_PASSWORD \
@@ -85,7 +85,7 @@ install_database() {
         --adminuser=$MOODLE_USERNAME \
         --adminpass=$MOODLE_PASSWORD \
         --adminemail=$MOODLE_EMAIL \
-        --fullname=Dockerized_Moodle \
+        --fullname=$MOODLE_SITENAME \
         --shortname=moodle \
         --agree-license
 }
