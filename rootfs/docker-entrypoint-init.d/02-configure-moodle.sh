@@ -115,9 +115,13 @@ upgrade_config_file() {
     update_or_add_config_value "\$CFG->reverseproxy" "$REVERSEPROXY"
     update_or_add_config_value "\$CFG->sslproxy" "$SSLPROXY"
     update_or_add_config_value "\$CFG->preventexecpath" "true"
-    update_or_add_config_value "\$CFG->session_handler_class" '\\core\\session\\redis'
-    update_or_add_config_value "\$CFG->session_redis_host" "$REDIS_HOST"
-    update_or_add_config_value "\$CFG->session_redis_serializer_use_igbinary" "true"
+
+    # Check if REDIS_HOST is set and not empty
+    if [ -n "$REDIS_HOST" ]; then
+        update_or_add_config_value "\$CFG->session_handler_class" '\\core\\session\\redis'
+        update_or_add_config_value "\$CFG->session_redis_host" "$REDIS_HOST"
+        update_or_add_config_value "\$CFG->session_redis_serializer_use_igbinary" "true"
+    fi
     
 }
 
@@ -197,5 +201,8 @@ else
     fi
 fi
 
-echo "Configuring redis cache..."
-php82 -d max_input_vars=10000 /var/www/html/admin/cli/configure_redis.php ${REDIS_HOST}
+# Check if REDIS_HOST is set and not empty
+if [ -n "$REDIS_HOST" ]; then
+    echo "Configuring redis cache..."
+    php82 -d max_input_vars=10000 /var/www/html/admin/cli/configure_redis.php ${REDIS_HOST}
+fi
