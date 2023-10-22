@@ -11,8 +11,14 @@ config_file="/var/www/html/config.php"
 update_or_add_config_value() {
     local key="$1"  # The configuration key (e.g., $CFG->wwwroot)
     local value="$2"  # The new value for the configuration key
-    
-    if [[ "$value" == 'true' || "$value" == 'false' ]]; then
+
+    if [ -z "$value" ]; then
+        # If value is empty, remove the line with the key if it exists
+        sed -i "/$key/d" "$config_file"
+        return
+    fi
+
+    if [ "$value" = 'true' ] || [ "$value" = 'false' ]; then
         # Handle boolean values without quotes
         quote=''
     else
@@ -23,9 +29,11 @@ update_or_add_config_value() {
     if grep -q "$key" "$config_file"; then
         # If the key exists, replace its value
         sed -i "s|\($key\s*=\s*\)[^;]*;|\1$quote$value$quote;|g" "$config_file"
+
     else
         # If the key does not exist, add it before "require_once"
         sed -i "/require_once/i $key\t= $quote$value$quote;" "$config_file"
+
     fi
 }
 
@@ -34,7 +42,7 @@ check_db_availability() {
     local db_host="$1"
     local db_port="$2"
     local db_name="$3"
-    
+
     echo "Waiting for $db_host:$db_port to be ready..."
     while ! nc -w 1 "$db_host" "$db_port"; do
         # Show some progress
@@ -113,6 +121,19 @@ upgrade_config_file() {
     update_or_add_config_value "\$CFG->reverseproxy" "$REVERSEPROXY"
     update_or_add_config_value "\$CFG->sslproxy" "$SSLPROXY"
     update_or_add_config_value "\$CFG->preventexecpath" "true"
+
+    # Check if REDIS_HOST is set and not empty
+    if [ -n "$REDIS_HOST" ]; then
+        update_or_add_config_value "\$CFG->session_handler_class" '\\core\\session\\redis'
+        update_or_add_config_value "\$CFG->session_redis_host" "$REDIS_HOST"
+        update_or_add_config_value "\$CFG->session_redis_serializer_use_igbinary" "true"
+    else
+        # If REDIS_HOST is not set, remove the configuration lines
+        update_or_add_config_value "\$CFG->session_handler_class" ""
+        update_or_add_config_value "\$CFG->session_redis_host" ""
+        update_or_add_config_value "\$CFG->session_redis_serializer_use_igbinary" ""
+    fi
+
 }
 
 # Function to configure Moodle settings via CLI
@@ -127,6 +148,18 @@ configure_moodle_settings() {
     php82 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtpsecure --set="$SMTP_PROTOCOL"
     php82 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=noreplyaddress --set="$MOODLE_MAIL_NOREPLY_ADDRESS"
     php82 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=emailsubjectprefix --set="$MOODLE_MAIL_PREFIX"
+
+    # Check if DEBUG is set to true
+    if [ "${DEBUG:-false}" = "true" ]; then
+        echo "Enabling debug mode..."
+        php82 /var/www/html/admin/cli/cfg.php --name=debug --set=32767 # DEVELOPER
+        php82 /var/www/html/admin/cli/cfg.php --name=debugdisplay --set=1
+    else
+        echo "Disabling debug mode..."
+        php82 /var/www/html/admin/cli/cfg.php --name=debug --set=0 # NONE
+        php82 /var/www/html/admin/cli/cfg.php --name=debugdisplay --set=0
+    fi
+
 }
 
 # Function to perform some final configurations
@@ -182,11 +215,17 @@ else
     echo "Upgrading admin user"
     php82 -d max_input_vars=10000 /var/www/html/admin/cli/update_admin_user.php --username=$MOODLE_USERNAME --password=$MOODLE_PASSWORD --email=$MOODLE_EMAIL
     if [ -z "$AUTO_UPDATE_MOODLE" ] || [ "$AUTO_UPDATE_MOODLE" = true ]; then
-        
+
         upgrade_moodle
 
 
     else
         echo "Skipped auto update of Moodle"
     fi
+fi
+
+# Check if REDIS_HOST is set and not empty
+if [ -n "$REDIS_HOST" ]; then
+    echo "Configuring redis cache..."
+    php82 -d max_input_vars=10000 /var/www/html/admin/cli/configure_redis.php ${REDIS_HOST}
 fi

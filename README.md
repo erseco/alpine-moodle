@@ -22,7 +22,7 @@ Repository: https://github.com/erseco/alpine-moodle
 * Optimized to only use resources when there's traffic (by using PHP-FPM's ondemand PM)
 * Use of runit instead of supervisord to reduce memory footprint
 * Configured cron to run as non-privileged user https://github.com/gliderlabs/docker-alpine/issues/381#issuecomment-621946699
-* docker-compose sample with PostgreSQL
+* docker-compose sample with PostgreSQL and Redis
 * Configuration via ENV variables
 * Easily upgradable to new moodle versions
 * The servers Nginx, PHP-FPM run under a non-privileged user (nobody) to make it more secure
@@ -55,6 +55,7 @@ Define the ENV variables in docker-compose.yml file
 | SITE_URL                    | http://localhost     | Sets the public site url                                                                       |
 | REVERSEPROXY                | false                | Enable when setting up advanced reverse proxy |
 | SSLPROXY                    | false                | Disable SSL proxy to avoid site loop. Ej. Cloudfare                                            |
+| REDIS_HOST                  | redis                |                                          |
 | DB_TYPE                     | pgsql                | mysqli - pgsql - mariadb                                                                       |
 | DB_HOST                     | postgres             | DB_HOST Ej. db container name                                                                  |
 | DB_PORT                     | 5432                 | Postgres=5432 - MySQL=3306                                                                     |
@@ -81,6 +82,7 @@ Define the ENV variables in docker-compose.yml file
 | MOODLE_MAIL_NOREPLY_ADDRESS | noreply@localhost    |                                                                                                |
 | MOODLE_MAIL_PREFIX          | [moodle]             |                                                                                                |
 | AUTO_UPDATE_MOODLE          | true                 | Set to false to disable performing update of Moodle (e.g. plugins) at docker start             |
+| DEBUG                       | false                |                                                                                                |
 | client_max_body_size        | 50M                  |                                                                                                |
 | post_max_size               | 50M                  |                                                                                                |
 | upload_max_filesize         | 50M                  |                                                                                                |
