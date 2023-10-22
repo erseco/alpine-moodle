@@ -1,6 +1,10 @@
 version: '2'
 services:
 
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+
   postgres:
     image: postgres:alpine
     restart: unless-stopped
@@ -26,6 +30,7 @@ services:
       - DB_USER=moodle
       - DB_PASS=moodle
       - DB_PREFIX=mdl_
+      - REDIS_HOST=redis
       - REVERSEPROXY=false
       - SSLPROXY=false
       - MOODLE_EMAIL=user@example.com
@@ -47,6 +52,7 @@ services:
       - moodlehtml:/var/www/html
     depends_on:
       - postgres
+      - redis
 
 volumes:
   postgres: null

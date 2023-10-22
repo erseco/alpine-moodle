@@ -8,7 +8,7 @@ COPY --chown=nobody rootfs/ /
 
 # crond needs root, so install dcron and cap package and set the capabilities
 # on dcron binary https://github.com/inter169/systs/blob/master/alpine/crond/README.md
-RUN apk add --no-cache dcron libcap php82-sodium php82-exif php82-pecl-redis php82-ldap && \
+RUN apk add --no-cache dcron libcap php82-sodium php82-exif php82-pecl-redis php82-pecl-igbinary php82-ldap && \
     chown nobody:nobody /usr/sbin/crond && \
     setcap cap_setgid=ep /usr/sbin/crond
 
@@ -31,6 +31,7 @@ ENV MOODLE_URL=https://github.com/moodle/moodle/archive/MOODLE_403_STABLE.tar.gz
     DB_PASS=moodle \
     DB_PREFIX=mdl_ \
     DB_DBHANDLEOPTIONS=false \
+    REDIS_HOST=redis \
     REVERSEPROXY=false \
     SSLPROXY=false \
     MY_CERTIFICATES=none \

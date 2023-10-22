@@ -23,9 +23,11 @@ update_or_add_config_value() {
     if grep -q "$key" "$config_file"; then
         # If the key exists, replace its value
         sed -i "s|\($key\s*=\s*\)[^;]*;|\1$quote$value$quote;|g" "$config_file"
+
     else
         # If the key does not exist, add it before "require_once"
         sed -i "/require_once/i $key\t= $quote$value$quote;" "$config_file"
+
     fi
 }
 
@@ -113,6 +115,10 @@ upgrade_config_file() {
     update_or_add_config_value "\$CFG->reverseproxy" "$REVERSEPROXY"
     update_or_add_config_value "\$CFG->sslproxy" "$SSLPROXY"
     update_or_add_config_value "\$CFG->preventexecpath" "true"
+    update_or_add_config_value "\$CFG->session_handler_class" '\\core\\session\\redis'
+    update_or_add_config_value "\$CFG->session_redis_host" "$REDIS_HOST"
+    update_or_add_config_value "\$CFG->session_redis_serializer_use_igbinary" "true"
+    
 }
 
 # Function to configure Moodle settings via CLI
@@ -190,3 +196,6 @@ else
         echo "Skipped auto update of Moodle"
     fi
 fi
+
+echo "Configuring redis cache..."
+php82 -d max_input_vars=10000 /var/www/html/admin/cli/configure_redis.php ${REDIS_HOST}
