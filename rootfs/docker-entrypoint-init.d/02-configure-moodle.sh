@@ -11,7 +11,7 @@ config_file="/var/www/html/config.php"
 update_or_add_config_value() {
     local key="$1"  # The configuration key (e.g., $CFG->wwwroot)
     local value="$2"  # The new value for the configuration key
-    
+
     if [ -z "$value" ]; then
         # If value is empty, remove the line with the key if it exists
         sed -i "/$key/d" "$config_file"
@@ -42,7 +42,7 @@ check_db_availability() {
     local db_host="$1"
     local db_port="$2"
     local db_name="$3"
-    
+
     echo "Waiting for $db_host:$db_port to be ready..."
     while ! nc -w 1 "$db_host" "$db_port"; do
         # Show some progress
@@ -127,8 +127,13 @@ upgrade_config_file() {
         update_or_add_config_value "\$CFG->session_handler_class" '\\core\\session\\redis'
         update_or_add_config_value "\$CFG->session_redis_host" "$REDIS_HOST"
         update_or_add_config_value "\$CFG->session_redis_serializer_use_igbinary" "true"
+    else
+        # If REDIS_HOST is not set, remove the configuration lines
+        update_or_add_config_value "\$CFG->session_handler_class" ""
+        update_or_add_config_value "\$CFG->session_redis_host" ""
+        update_or_add_config_value "\$CFG->session_redis_serializer_use_igbinary" ""
     fi
-    
+
 }
 
 # Function to configure Moodle settings via CLI
@@ -198,7 +203,7 @@ else
     echo "Upgrading admin user"
     php82 -d max_input_vars=10000 /var/www/html/admin/cli/update_admin_user.php --username=$MOODLE_USERNAME --password=$MOODLE_PASSWORD --email=$MOODLE_EMAIL
     if [ -z "$AUTO_UPDATE_MOODLE" ] || [ "$AUTO_UPDATE_MOODLE" = true ]; then
-        
+
         upgrade_moodle
 
 
