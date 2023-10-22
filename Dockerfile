@@ -48,6 +48,7 @@ ENV MOODLE_URL=https://github.com/moodle/moodle/archive/MOODLE_403_STABLE.tar.gz
     MOODLE_MAIL_NOREPLY_ADDRESS=noreply@localhost \
     MOODLE_MAIL_PREFIX=[moodle] \
     AUTO_UPDATE_MOODLE=true \
+    DEBUG=false \
     client_max_body_size=50M \
     post_max_size=50M \
     upload_max_filesize=50M \

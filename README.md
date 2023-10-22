@@ -82,6 +82,7 @@ Define the ENV variables in docker-compose.yml file
 | MOODLE_MAIL_NOREPLY_ADDRESS | noreply@localhost    |                                                                                                |
 | MOODLE_MAIL_PREFIX          | [moodle]             |                                                                                                |
 | AUTO_UPDATE_MOODLE          | true                 | Set to false to disable performing update of Moodle (e.g. plugins) at docker start             |
+| DEBUG                       | false                |                                                                                                |
 | client_max_body_size        | 50M                  |                                                                                                |
 | post_max_size               | 50M                  |                                                                                                |
 | upload_max_filesize         | 50M                  |                                                                                                |

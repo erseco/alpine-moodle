@@ -148,6 +148,18 @@ configure_moodle_settings() {
     php82 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtpsecure --set="$SMTP_PROTOCOL"
     php82 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=noreplyaddress --set="$MOODLE_MAIL_NOREPLY_ADDRESS"
     php82 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=emailsubjectprefix --set="$MOODLE_MAIL_PREFIX"
+
+    # Check if DEBUG is set to true
+    if [ "${DEBUG:-false}" = "true" ]; then
+        echo "Enabling debug mode..."
+        php82 /var/www/html/admin/cli/cfg.php --name=debug --set=32767 # DEVELOPER
+        php82 /var/www/html/admin/cli/cfg.php --name=debugdisplay --set=1
+    else
+        echo "Disabling debug mode..."
+        php82 /var/www/html/admin/cli/cfg.php --name=debug --set=0 # NONE
+        php82 /var/www/html/admin/cli/cfg.php --name=debugdisplay --set=0
+    fi
+
 }
 
 # Function to perform some final configurations
