@@ -12,7 +12,13 @@ update_or_add_config_value() {
     local key="$1"  # The configuration key (e.g., $CFG->wwwroot)
     local value="$2"  # The new value for the configuration key
     
-    if [[ "$value" == 'true' || "$value" == 'false' ]]; then
+    if [ -z "$value" ]; then
+        # If value is empty, remove the line with the key if it exists
+        sed -i "/$key/d" "$config_file"
+        return
+    fi
+
+    if [ "$value" = 'true' ] || [ "$value" = 'false' ]; then
         # Handle boolean values without quotes
         quote=''
     else
