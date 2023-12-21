@@ -3,7 +3,7 @@
 [![Docker Pulls](https://img.shields.io/docker/pulls/erseco/alpine-moodle.svg)](https://hub.docker.com/r/erseco/alpine-moodle/)
 ![Docker Image Size](https://img.shields.io/docker/image-size/erseco/alpine-moodle)
 ![nginx 1.24.0](https://img.shields.io/badge/nginx-1.18-brightgreen.svg)
-![php 8.2](https://img.shields.io/badge/php-8.2-brightgreen.svg)
+![php 8.3](https://img.shields.io/badge/php-8.3-brightgreen.svg)
 ![moodle-4.3.1+](https://img.shields.io/badge/moodle-4.3-yellow)
 ![License MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 
@@ -15,7 +15,7 @@ Repository: https://github.com/erseco/alpine-moodle
 
 * Built on the lightweight image https://github.com/erseco/alpine-php-webserver
 * Very small Docker image size (+/-70MB)
-* Uses PHP 8.21 for better performance, lower cpu usage & memory footprint
+* Uses PHP 8.3 for better performance, lower cpu usage & memory footprint
 * Support for HA installations: php-redis, php-ldap (also with self-signed certs)
 * Multi-arch support: 386, amd64, arm/v6, arm/v7, arm64, ppc64le, s390x
 * Optimized for 100 concurrent users
