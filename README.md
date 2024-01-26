@@ -6,6 +6,7 @@
 ![php 8.2](https://img.shields.io/badge/php-8.2-brightgreen.svg)
 ![moodle-4.3.1+](https://img.shields.io/badge/moodle-4.3-yellow)
 ![License MIT](https://img.shields.io/badge/license-MIT-blue.svg)
+<a href="https://www.buymeacoffee.com/erseco"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" height="20px"></a>
 
 Moodle setup for Docker, build on [Alpine Linux](http://www.alpinelinux.org/).
 The image is only +/- 70MB large.
