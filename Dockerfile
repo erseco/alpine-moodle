@@ -1,5 +1,5 @@
 ARG ARCH=
-FROM ${ARCH}erseco/alpine-php-webserver:latest
+FROM ${ARCH}erseco/alpine-php-webserver:php83
 
 LABEL maintainer="Ernesto Serrano <info@ernesto.es>"
 
@@ -8,13 +8,9 @@ COPY --chown=nobody rootfs/ /
 
 # crond needs root, so install dcron and cap package and set the capabilities
 # on dcron binary https://github.com/inter169/systs/blob/master/alpine/crond/README.md
-RUN apk add --no-cache dcron libcap php82-sodium php82-exif php82-pecl-redis php82-pecl-igbinary php82-ldap && \
+RUN apk add --no-cache dcron libcap php83-sodium php83-exif php83-pecl-redis php83-pecl-igbinary php83-ldap && \
     chown nobody:nobody /usr/sbin/crond && \
     setcap cap_setgid=ep /usr/sbin/crond
-
-# add a quick-and-dirty hack  to fix https://github.com/erseco/alpine-moodle/issues/26
-RUN apk add gnu-libiconv=1.15-r3 --update-cache --repository http://dl-cdn.alpinelinux.org/alpine/v3.13/community/ --allow-untrusted
-ENV LD_PRELOAD /usr/lib/preloadable_libiconv.so
 
 USER nobody
 
