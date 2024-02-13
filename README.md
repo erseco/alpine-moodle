@@ -4,7 +4,7 @@
 ![Docker Image Size](https://img.shields.io/docker/image-size/erseco/alpine-moodle)
 ![nginx 1.24.0](https://img.shields.io/badge/nginx-1.18-brightgreen.svg)
 ![php 8.2](https://img.shields.io/badge/php-8.2-brightgreen.svg)
-![moodle-4.3.1+](https://img.shields.io/badge/moodle-4.3-yellow)
+![moodle-4.3.3](https://img.shields.io/badge/moodle-4.3-yellow)
 ![License MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 <a href="https://www.buymeacoffee.com/erseco"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" height="20px"></a>
 
