@@ -24,10 +24,9 @@ jobs:
       run: |
         CURRENT_VERSION=$(git tag --sort=-v:refname | head -n 1)
         if [ "$CURRENT_VERSION" != "$LATEST_MOODLE_VERSION" ]; then
+          echo "Latest version is already tagged"
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git tag $LATEST_MOODLE_VERSION
           git push origin $LATEST_MOODLE_VERSION
-        else
-          echo "Latest version is already tagged."
-
+        fi
