@@ -11,7 +11,8 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      	fetch-tags: true
+      with:
+        fetch-tags: true
 
     - name: Check Moodle Latest Version
       id: check_moodle
