@@ -4,6 +4,7 @@ on:
   schedule:
     - cron: '0 0 * * *' # Run this task daily
   workflow_dispatch: # Allows manually triggering
+
 jobs:
   check-version-and-tag:
     runs-on: ubuntu-latest
@@ -23,14 +24,16 @@ jobs:
     - name: Create Tag if New
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        LATEST_WP_VERSION: ${{ env.LATEST_WP_VERSION }}
-        GH_PAT: ${{ secrets.GH_PAT }}        
+        LATEST_MOODLE_VERSION: ${{ env.LATEST_MOODLE_VERSION }}
+        GH_PAT: ${{ secrets.GH_PAT }}
       run: |
-        CURRENT_VERSION=$(git tag --sort=-v:refname | head -n 1)
+        # Get the highest version tag from the repo, using version sorting
+        CURRENT_VERSION=$(git tag | sort -V | tail -n 1)
         echo "Latest MOODLE Version from API: $LATEST_MOODLE_VERSION"
         echo "Current MOODLE version from Git tags: $CURRENT_VERSION"
 
-        if [ "$CURRENT_VERSION" != "$LATEST_MOODLE_VERSION" ]; then
+        # Compare versions
+        if [ "$(printf '%s\n' "$LATEST_MOODLE_VERSION" "$CURRENT_VERSION" | sort -V | head -n 1)" != "$LATEST_MOODLE_VERSION" ]; then
           echo "Creating new tag for $LATEST_MOODLE_VERSION"
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
