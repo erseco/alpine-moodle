@@ -56,7 +56,7 @@ Define the ENV variables in docker-compose.yml file
 | SITE_URL                    | http://localhost     | Sets the public site url                                                                       |
 | REVERSEPROXY                | false                | Enable when setting up advanced reverse proxy |
 | SSLPROXY                    | false                | Disable SSL proxy to avoid site loop. Ej. Cloudfare                                            |
-| REDIS_HOST                  | redis                |                                          |
+| REDIS_HOST                  |                      | Set the host of the redis instance. Ej. redis                                         |
 | DB_TYPE                     | pgsql                | mysqli - pgsql - mariadb                                                                       |
 | DB_HOST                     | postgres             | DB_HOST Ej. db container name                                                                  |
 | DB_PORT                     | 5432                 | Postgres=5432 - MySQL=3306                                                                     |
@@ -88,3 +88,42 @@ Define the ENV variables in docker-compose.yml file
 | post_max_size               | 50M                  |                                                                                                |
 | upload_max_filesize         | 50M                  |                                                                                                |
 | max_input_vars              | 5000                 |                                                                                                |
+| PRE_CONFIGURE_COMMANDS      |                      | Commands to run before starting the configuration                                              |
+| POST_CONFIGURE_COMMANDS     |                      | Commands to run after finished the configuration                                               |
+
+## Pre and Post Configuration Commands
+
+You can define commands to be executed before and after the configuration of Moodle using the `PRE_CONFIGURE_COMMANDS` and `POST_CONFIGURE_COMMANDS` environment variables. These can be useful for tasks such as installing additional packages or running scripts.
+
+Example `docker-compose.yml` configuration:
+
+```yaml
+version: '3'
+services:
+  moodle:
+    image: erseco/alpine-moodle
+    environment:
+      SITE_URL: "http://localhost"
+      DB_TYPE: "pgsql"
+      DB_HOST: "postgres"
+      DB_PORT: 5432
+      DB_NAME: "moodle"
+      DB_USER: "moodle"
+      MOODLE_USERNAME: "admin"
+      MOODLE_PASSWORD: "admin"
+      PRE_CONFIGURE_COMMANDS: "echo 'Running pre-configure commands'"
+      POST_CONFIGURE_COMMANDS: "echo 'Running post-configure commands'"
+```
+
+### Installing Plugins from URL
+
+You can also install Moodle plugins directly from a URL using the `install_plugin.php` script. This can be useful for automating plugin installations during container setup.
+
+Example command:
+
+```sh
+php admin/cli/install_plugin.php --url=https://github.com/mohessaid/moodle_local_plugin/archive/refs/heads/master.zip --run
+```
+
+This command will download and install the specified plugin into your Moodle instance.
+```

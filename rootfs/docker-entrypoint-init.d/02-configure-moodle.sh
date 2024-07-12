@@ -44,7 +44,7 @@ check_db_availability() {
     local db_name="$3"
 
     echo "Waiting for $db_host:$db_port to be ready..."
-    while ! nc -w 1 "$db_host" "$db_port"; do
+    while ! nc -w 1 "$db_host" "$db_port" > /dev/null 2>&1; do
         # Show some progress
         echo -n '.'
         sleep 1
@@ -187,8 +187,11 @@ if [ -n "$DB_HOST_REPLICA" ]; then
     check_db_availability "$DB_HOST_REPLICA" "${DB_PORT_REPLICA:-$DB_PORT}"
 fi
 
-# Give it another 3 seconds.
-sleep 3
+# Execute pre-install commands if the variable is set
+if [ -n "$PRE_CONFIGURE_COMMANDS" ]; then
+    echo "Executing pre-configure commands..."
+    eval "$PRE_CONFIGURE_COMMANDS"
+fi
 
 # Add trusted certificates to "ldap-truststore" if specified
 if [ "$MY_CERTIFICATES" != 'none' ]; then
@@ -228,4 +231,10 @@ fi
 if [ -n "$REDIS_HOST" ]; then
     echo "Configuring redis cache..."
     php83 -d max_input_vars=10000 /var/www/html/admin/cli/configure_redis.php ${REDIS_HOST}
+fi
+
+# Execute post-install commands if the variable is set
+if [ -n "$POST_CONFIGURE_COMMANDS" ]; then
+    echo "Executing post-configure commands..."
+    eval "$POST_CONFIGURE_COMMANDS"
 fi
