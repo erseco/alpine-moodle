@@ -74,8 +74,8 @@ jobs:
       # Step 7: Test the built image
       - name: Test
         run: |
-          docker-compose version
-          docker-compose --file docker-compose.test.yml up --exit-code-from sut --timeout 10 --build
+          docker compose version
+          docker compose --file docker-compose.test.yml up --exit-code-from sut --timeout 10 --build
 
       # Step 8: Build and Push (if not a PR)
       - name: Build and push
