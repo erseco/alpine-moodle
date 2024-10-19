@@ -99,7 +99,7 @@ if ($options['url']) {
         'zipfilepath' => $tempfile,
     ];
 } else {
-    $pluginDir = $CFG->dirroot . '/' . $options['plugin'];
+    $pluginDir = $CFG->dirroot . '/mod/' . $options['plugin'];
 
     $plugininfo = get_plugin_info_from_version_file($pluginDir);
     if (!$plugininfo) {
