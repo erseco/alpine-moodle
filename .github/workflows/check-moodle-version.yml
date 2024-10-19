@@ -21,29 +21,38 @@ jobs:
         LATEST_MOODLE_VERSION=$(curl -s https://api.github.com/repos/moodle/moodle/tags | jq -r '.[0].name')
         echo "LATEST_MOODLE_VERSION=$LATEST_MOODLE_VERSION" >> $GITHUB_ENV
 
+    - name: Get Current Version from Git Tags
+      id: get_current_version
+      run: |
+        CURRENT_VERSION=$(git tag | sort -V | tail -n 1)
+        echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_ENV
+
+    - name: Compare Versions
+      id: version_compare
+      uses: madhead/semver-utils@v0.3.1
+      with:
+        version: '${{ env.LATEST_MOODLE_VERSION }}'
+        compare-to: '${{ env.CURRENT_VERSION }}'
+
     - name: Create Tag if New
+      if: steps.version_compare.outputs.comparison-result == '>'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         LATEST_MOODLE_VERSION: ${{ env.LATEST_MOODLE_VERSION }}
         GH_PAT: ${{ secrets.GH_PAT }}
       run: |
-        # Get the highest version tag from the repo, using version sorting
-        CURRENT_VERSION=$(git tag | sort -V | tail -n 1)
-        echo "Latest MOODLE Version from API: $LATEST_MOODLE_VERSION"
-        echo "Current MOODLE version from Git tags: $CURRENT_VERSION"
+        echo "Creating new tag for $LATEST_MOODLE_VERSION"
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git tag $LATEST_MOODLE_VERSION
+        git push origin $LATEST_MOODLE_VERSION
+        curl -X POST \
+          -H "Accept: application/vnd.github.v3+json" \
+          -H "Authorization: token $GH_PAT" \
+          https://api.github.com/repos/${{ github.repository }}/actions/workflows/build.yml/dispatches \
+          -d '{"ref":"refs/tags/'"$LATEST_MOODLE_VERSION"'"}'
 
-        # Compare versions
-        if [ "$(printf '%s\n' "$LATEST_MOODLE_VERSION" "$CURRENT_VERSION" | sort -V | head -n 1)" != "$LATEST_MOODLE_VERSION" ]; then
-          echo "Creating new tag for $LATEST_MOODLE_VERSION"
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git tag $LATEST_MOODLE_VERSION
-          git push origin $LATEST_MOODLE_VERSION
-          curl -X POST \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: token $GH_PAT" \
-            https://api.github.com/repos/${{ github.repository }}/actions/workflows/build.yml/dispatches \
-            -d '{"ref":"refs/tags/'"$LATEST_MOODLE_VERSION"'"}'
-        else
-          echo "Latest version is already tagged."
-        fi
+    - name: No New Version
+      if: steps.version_compare.outputs.comparison-result != '>'
+      run: echo "Latest version is already tagged or is older."
+
