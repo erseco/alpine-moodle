@@ -12,6 +12,7 @@ Options:
     -h --help                   Print this help.
     --plugin=<pluginname>       The name of the plugin to install.
     --url=<pluginurl>           The URL to download the plugin from.
+    --type=<plugintype>         The type of the plugin (e.g., mod, block, filter, theme, local). Defaults to mod.
     --run                       Execute install. If this option is not set, the script will run in dry mode.
     --force                     Force install even if plugin exists (useful for development).
     --showsql                   Show SQL queries before they are executed.
@@ -32,6 +33,7 @@ list($options, $unrecognised) = cli_get_params([
     'help' => false,
     'plugin' => false,
     'url' => false,
+    'type' => 'mod', // Default plugin type
     'run' => false,
     'force' => false,
     'showsql' => false,
@@ -94,6 +96,16 @@ if ($options['url']) {
     $pluginname = detect_plugin_name("$tempdir/$rootdir");
     if (!$pluginname) {
         cli_error('Failed to detect plugin name.');
+    }
+
+    $destination = detect_and_move_plugin($pluginname, "$tempdir/$rootdir", $options['type']);
+    if (!$destination) {
+        cli_error('Failed to move plugin to the correct directory.');
+    }
+
+    $destination = detect_and_move_plugin($pluginname, $pluginDir, $options['type']);
+    if (!$destination) {
+        cli_error('Failed to move plugin to the correct directory.');
     }
 
     $plugins[] = (object)[
@@ -226,9 +238,10 @@ function detect_plugin_name($dir) {
  * 
  * @param string $pluginname Name of the plugin.
  * @param string $sourcepath Path to the extracted plugin.
+ * @param string $type The type of the plugin.
  * @return bool|string Returns the new path of the plugin if successful, or false on failure.
  */
-function detect_and_move_plugin($pluginname, $sourcepath) {
+function detect_and_move_plugin($pluginname, $sourcepath, $type) {
     global $CFG;
 
     // Define the base paths for different plugin types
@@ -240,10 +253,9 @@ function detect_and_move_plugin($pluginname, $sourcepath) {
         // Add other plugin types as needed
     ];
 
-    // Attempt to detect the plugin type based on the name or folder structure
-    foreach ($plugin_types as $type => $path) {
-        if (strpos($pluginname, $type . '_') === 0) {
-            $destination = $path . basename($sourcepath);
+    // Use the provided type to determine the destination path
+    if (array_key_exists($type, $plugin_types)) {
+        $destination = $plugin_types[$type] . basename($sourcepath);
 
             // Ensure the directory is writable before moving the plugin
             if (!is_writable($path)) {
@@ -260,8 +272,8 @@ function detect_and_move_plugin($pluginname, $sourcepath) {
         }
     }
 
-    // If the plugin type cannot be detected
-    cli_error("Unknown plugin type for $pluginname. Plugin was not moved.");
+    // If the plugin type is not recognized
+    cli_error("Unknown plugin type: $type. Plugin was not moved.");
     return false;
 }
 
