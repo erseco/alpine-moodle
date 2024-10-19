@@ -6,13 +6,14 @@ require_once($CFG->libdir . '/clilib.php');
 require_once($CFG->libdir . '/adminlib.php');
 require_once($CFG->libdir . '/upgradelib.php');
 
-$help = "Command line tool to install plugins.
+$help = "Command line tool to install or update plugins.
 
 Options:
     -h --help                   Print this help.
     --plugin=<pluginname>       The name of the plugin to install.
     --url=<pluginurl>           The URL to download the plugin from.
     --run                       Execute install. If this option is not set, the script will run in dry mode.
+    --force                     Force install even if plugin exists (useful for development).
     --showsql                   Show SQL queries before they are executed.
     --showdebugging             Show developer level debugging information.
 
@@ -32,6 +33,7 @@ list($options, $unrecognised) = cli_get_params([
     'plugin' => false,
     'url' => false,
     'run' => false,
+    'force' => false,
     'showsql' => false,
     'showdebugging' => false,
 ], [
@@ -109,9 +111,9 @@ if ($options['url']) {
     $pluginname = $plugininfo->component;
     cli_writeln("Preparing to install plugin: $pluginname");
 
-    // Check if the plugin is already installed
-    if ($pluginman->get_plugin_info($pluginname)) {
-        cli_error("Plugin $pluginname is already installed.");
+    // Check if the plugin is already installed, unless forced
+    if ($pluginman->get_plugin_info($pluginname) && !$options['force']) {
+        cli_error("Plugin $pluginname is already installed. Use --force to reinstall.");
     }
 
     $plugins[] = (object)[
@@ -164,58 +166,6 @@ function download_and_extract_plugin($url, $tempdir) {
     }
 
     return $zipfile;
-}
-
-/**
- * Download a file from the given URL.
- *
- * @param string $url The URL to download the file from.
- * @param string $path The path to save the downloaded file.
- * @return bool True on success, false on failure.
- */
-function download_file($url, $path) {
-    $fp = fopen($path, 'w+');
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_FILE, $fp);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 50);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_exec($ch);
-    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-    fclose($fp);
-    return $http_code == 200;
-}
-
-/**
- * Get plugin info from version.php file in the plugin directory.
- *
- * @param string $pluginDir Path to the plugin directory.
- * @return stdClass|null Plugin info object or null if invalid.
- */
-function get_plugin_info_from_version_file($pluginDir) {
-    $versionFile = $pluginDir . '/version.php';
-    if (!file_exists($versionFile)) {
-        return null;
-    }
-
-    // Create a new stdClass object to hold the plugin info.
-    $plugin = new stdClass();
-
-    // Include the version file to get the $plugin array.
-    include($versionFile);
-
-    if (!isset($plugin->component)) {
-        return null;
-    }
-
-    return (object)[
-        'component' => $plugin->component,
-        'version' => $plugin->version,
-        'requires' => $plugin->requires,
-        'release' => $plugin->release,
-        'maturity' => $plugin->maturity,
-    ];
 }
 
 /**
