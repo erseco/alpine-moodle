@@ -135,11 +135,11 @@ if ($options['run']) {
     // Run the Moodle upgrade script
     upgrade_noncore(true);
     \core\session\manager::gc(); // Clean up sessions
+    exit(0);
 } else {
     cli_writeln('Dry run complete. Use --run to install the plugin.');
+    exit(0);
 }
-
-exit(0);
 
 /**
  * Download and extract the plugin from the given URL.
@@ -169,6 +169,37 @@ function download_and_extract_plugin($url, $tempdir) {
 }
 
 /**
+ * Get plugin info from version.php file in the plugin directory.
+ *
+ * @param string $pluginDir Path to the plugin directory.
+ * @return stdClass|null Plugin info object or null if invalid.
+ */
+function get_plugin_info_from_version_file($pluginDir) {
+    $versionFile = $pluginDir . '/version.php';
+    if (!file_exists($versionFile)) {
+        return null;
+    }
+
+    // Create a new stdClass object to hold the plugin info.
+    $plugin = new stdClass();
+
+    // Include the version file to get the $plugin array.
+    include($versionFile);
+
+    if (!isset($plugin->component)) {
+        return null;
+    }
+
+    return (object)[
+        'component' => $plugin->component,
+        'version' => $plugin->version,
+        'requires' => $plugin->requires,
+        'release' => $plugin->release,
+        'maturity' => $plugin->maturity,
+    ];
+}
+
+/**
  * Detect the plugin name from the extracted plugin directory.
  *
  * @param string $dir Path to the extracted plugin directory.
@@ -189,3 +220,48 @@ function detect_plugin_name($dir) {
 
     return $plugin->component;
 }
+
+/**
+ * Detect the plugin type and move to the correct directory.
+ * 
+ * @param string $pluginname Name of the plugin.
+ * @param string $sourcepath Path to the extracted plugin.
+ * @return bool|string Returns the new path of the plugin if successful, or false on failure.
+ */
+function detect_and_move_plugin($pluginname, $sourcepath) {
+    global $CFG;
+
+    // Define the base paths for different plugin types
+    $plugin_types = [
+        'mod' => $CFG->dirroot . '/mod/',
+        'block' => $CFG->dirroot . '/blocks/',
+        'filter' => $CFG->dirroot . '/filter/',
+        'theme' => $CFG->dirroot . '/theme/',
+        // Add other plugin types as needed
+    ];
+
+    // Attempt to detect the plugin type based on the name or folder structure
+    foreach ($plugin_types as $type => $path) {
+        if (strpos($pluginname, $type . '_') === 0) {
+            $destination = $path . basename($sourcepath);
+
+            // Ensure the directory is writable before moving the plugin
+            if (!is_writable($path)) {
+                cli_error("Directory $path is not writable. Check permissions.");
+            }
+
+            // Move the plugin to the correct directory
+            if (rename($sourcepath, $destination)) {
+                cli_writeln("Plugin moved to $destination.");
+                return $destination;
+            } else {
+                return false;
+            }
+        }
+    }
+
+    // If the plugin type cannot be detected
+    cli_error("Unknown plugin type for $pluginname. Plugin was not moved.");
+    return false;
+}
+
