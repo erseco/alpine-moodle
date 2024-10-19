@@ -257,18 +257,17 @@ function detect_and_move_plugin($pluginname, $sourcepath, $type) {
     if (array_key_exists($type, $plugin_types)) {
         $destination = $plugin_types[$type] . basename($sourcepath);
 
-            // Ensure the directory is writable before moving the plugin
-            if (!is_writable($path)) {
-                cli_error("Directory $path is not writable. Check permissions.");
-            }
+        // Ensure the directory is writable before moving the plugin
+        if (!is_writable($destination)) {
+            cli_error("Directory $destination is not writable. Check permissions.");
+        }
 
-            // Move the plugin to the correct directory
-            if (rename($sourcepath, $destination)) {
-                cli_writeln("Plugin moved to $destination.");
-                return $destination;
-            } else {
-                return false;
-            }
+        // Move the plugin to the correct directory
+        if (rename($sourcepath, $destination)) {
+            cli_writeln("Plugin moved to $destination.");
+            return $destination;
+        } else {
+            return false;
         }
     }
 
