@@ -10,7 +10,6 @@ $help = "Command line tool to install or update plugins.
 
 Options:
     -h --help                   Print this help.
-    --plugin=<pluginname>       The name of the plugin to install.
     --url=<pluginurl>           The URL to download the plugin from.
     --type=<plugintype>         The type of the plugin (e.g., mod, block, filter, theme, local). Defaults to mod.
     --run                       Execute install. If this option is not set, the script will run in dry mode.
@@ -67,8 +66,8 @@ if ($options['showsql']) {
     $DB->set_debug(true);
 }
 
-if (!$options['plugin'] && !$options['url']) {
-    cli_writeln('You must specify either a plugin name or a URL.');
+if (!$options['url']) {
+    cli_writeln('You must specify a URL to download the plugin.');
     cli_writeln($help);
     exit(0);
 }
@@ -119,27 +118,6 @@ if ($options['url']) {
         'component' => $pluginname,
         'zipfilepath' => $tempfile,
     ];
-} else {
-    $pluginDir = $CFG->dirroot . '/mod/' . $options['plugin'];
-
-    $plugininfo = get_plugin_info_from_version_file($pluginDir);
-    if (!$plugininfo) {
-        cli_error('Invalid plugin directory: ' . $pluginDir);
-    }
-
-    $pluginname = $plugininfo->component;
-    cli_writeln("Preparing to install plugin: $pluginname");
-
-    // Check if the plugin is already installed, unless forced
-    if ($pluginman->get_plugin_info($pluginname) && !$options['force']) {
-        cli_error("Plugin $pluginname is already installed. Use --force to reinstall.");
-    }
-
-    $plugins[] = (object)[
-        'component' => $pluginname,
-        'zipfilepath' => null,
-    ];
-}
 
 if ($options['run']) {
     cli_writeln('Installing plugin...');
