@@ -15,6 +15,7 @@ Options:
     --type=<plugintype>         The type of the plugin (e.g., mod, block, filter, theme, local). Defaults to mod.
     --run                       Execute install. If this option is not set, the script will run in dry mode.
     --force                     Force install even if plugin exists (useful for development).
+    --debug                     Enable debug mode to see detailed error messages.
     --showsql                   Show SQL queries before they are executed.
     --showdebugging             Show developer level debugging information.
 
@@ -37,6 +38,7 @@ list($options, $unrecognised) = cli_get_params([
     'run' => false,
     'force' => false,
     'showsql' => false,
+    'debug' => false,
     'showdebugging' => false,
 ], [
     'h' => 'help'
@@ -45,6 +47,11 @@ list($options, $unrecognised) = cli_get_params([
 if ($unrecognised) {
     $unrecognised = implode(PHP_EOL . '  ', $unrecognised);
     cli_error(get_string('cliunknowoption', 'core_admin', $unrecognised));
+}
+
+if ($options['debug']) {
+    set_debugging(DEBUG_DEVELOPER, true);
+    cli_writeln('Debug mode enabled.');
 }
 
 if ($options['help']) {
