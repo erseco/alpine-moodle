@@ -2,3 +2,4 @@
 /Persistent
 .data
 .DS_Store
+.aider*
