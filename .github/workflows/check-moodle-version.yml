@@ -24,7 +24,8 @@ jobs:
     - name: Get Current Version from Git Tags
       id: get_current_version
       run: |
-        CURRENT_VERSION=$(git tag | sort -V | tail -n 1)
+        # Get the latest stable tag (no pre-release)
+        CURRENT_VERSION=$(git tag | grep -vE '(-rc|-beta|-alpha)' | sort -V | tail -n 1)
         echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_ENV
 
     - name: Compare Versions
