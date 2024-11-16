@@ -49,7 +49,6 @@ services:
         echo 'This is a pre-configure command'
       POST_CONFIGURE_COMMANDS: |
         echo 'This is a post-configure command'
-        php admin/cli/install_plugin.php --url=https://github.com/mohessaid/moodle_local_plugin/archive/refs/heads/master.zip --run
     ports:
       - 80:8080
     volumes:

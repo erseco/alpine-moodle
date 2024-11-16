@@ -41,7 +41,7 @@ if (array_key_exists('redis1', $stores)) {
 }
 
 // Include cache libraries
-require_once($CFG->dirroot.'/cache/locallib.php');
+require_once($CFG->dirroot.'/cache/classes/config_writer.php');
 
 // Get an instance of the cache_config_writer class
 $writer = cache_config_writer::instance();
