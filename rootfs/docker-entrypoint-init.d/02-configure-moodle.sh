@@ -55,7 +55,7 @@ check_db_availability() {
 # Function to generate config.php file
 generate_config_file() {
     echo "Generating config.php file..."
-    ENV_VAR='var' php83 -d max_input_vars=10000 /var/www/html/admin/cli/install.php \
+    ENV_VAR='var' php84 -d max_input_vars=10000 /var/www/html/admin/cli/install.php \
         --lang=$MOODLE_LANGUAGE \
         --wwwroot=$SITE_URL \
         --dataroot=/var/www/moodledata/ \
@@ -80,7 +80,7 @@ generate_config_file() {
 # Function to install the database
 install_database() {
     echo "Installing database..."
-    php83 -d max_input_vars=10000 /var/www/html/admin/cli/install_database.php \
+    php84 -d max_input_vars=10000 /var/www/html/admin/cli/install_database.php \
         --lang=$MOODLE_LANGUAGE \
         --adminuser=$MOODLE_USERNAME \
         --adminpass=$MOODLE_PASSWORD \
@@ -139,25 +139,25 @@ upgrade_config_file() {
 # Function to configure Moodle settings via CLI
 configure_moodle_settings() {
     echo "Configuring settings..."
-    php83 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=pathtophp --set=/usr/bin/php83
-    php83 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=pathtodu --set=/usr/bin/du
-    php83 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=enableblogs --set=0
-    php83 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtphosts --set="$SMTP_HOST:$SMTP_PORT"
-    php83 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtpuser --set="$SMTP_USER"
-    php83 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtppass --set="$SMTP_PASSWORD"
-    php83 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtpsecure --set="$SMTP_PROTOCOL"
-    php83 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=noreplyaddress --set="$MOODLE_MAIL_NOREPLY_ADDRESS"
-    php83 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=emailsubjectprefix --set="$MOODLE_MAIL_PREFIX"
+    php84 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=pathtophp --set=/usr/bin/php84
+    php84 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=pathtodu --set=/usr/bin/du
+    php84 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=enableblogs --set=0
+    php84 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtphosts --set="$SMTP_HOST:$SMTP_PORT"
+    php84 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtpuser --set="$SMTP_USER"
+    php84 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtppass --set="$SMTP_PASSWORD"
+    php84 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtpsecure --set="$SMTP_PROTOCOL"
+    php84 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=noreplyaddress --set="$MOODLE_MAIL_NOREPLY_ADDRESS"
+    php84 -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=emailsubjectprefix --set="$MOODLE_MAIL_PREFIX"
 
     # Check if DEBUG is set to true
     if [ "${DEBUG:-false}" = "true" ]; then
         echo "Enabling debug mode..."
-        php83 /var/www/html/admin/cli/cfg.php --name=debug --set=32767 # DEVELOPER
-        php83 /var/www/html/admin/cli/cfg.php --name=debugdisplay --set=1
+        php84 /var/www/html/admin/cli/cfg.php --name=debug --set=32767 # DEVELOPER
+        php84 /var/www/html/admin/cli/cfg.php --name=debugdisplay --set=1
     else
         echo "Disabling debug mode..."
-        php83 /var/www/html/admin/cli/cfg.php --name=debug --set=0 # NONE
-        php83 /var/www/html/admin/cli/cfg.php --name=debugdisplay --set=0
+        php84 /var/www/html/admin/cli/cfg.php --name=debug --set=0 # NONE
+        php84 /var/www/html/admin/cli/cfg.php --name=debugdisplay --set=0
     fi
 
 }
@@ -174,9 +174,9 @@ final_configurations() {
 # Function to upgrade Moodle
 upgrade_moodle() {
     echo "Upgrading moodle..."
-    php83 -d max_input_vars=10000 /var/www/html/admin/cli/maintenance.php --enable
-    php83 -d max_input_vars=10000 /var/www/html/admin/cli/upgrade.php --non-interactive --allow-unstable
-    php83 -d max_input_vars=10000 /var/www/html/admin/cli/maintenance.php --disable
+    php84 -d max_input_vars=10000 /var/www/html/admin/cli/maintenance.php --enable
+    php84 -d max_input_vars=10000 /var/www/html/admin/cli/upgrade.php --non-interactive --allow-unstable
+    php84 -d max_input_vars=10000 /var/www/html/admin/cli/maintenance.php --disable
 }
 
 # Check the availability of the primary database
@@ -209,14 +209,14 @@ fi
 upgrade_config_file
 
 # Check if the database is already installed
-if php83 -d max_input_vars=10000 /var/www/html/admin/cli/isinstalled.php ; then
+if php84 -d max_input_vars=10000 /var/www/html/admin/cli/isinstalled.php ; then
     install_database
     configure_moodle_settings
     final_configurations
 else
     configure_moodle_settings
     echo "Upgrading admin user"
-    php83 -d max_input_vars=10000 /var/www/html/admin/cli/update_admin_user.php --username=$MOODLE_USERNAME --password=$MOODLE_PASSWORD --email=$MOODLE_EMAIL
+    php84 -d max_input_vars=10000 /var/www/html/admin/cli/update_admin_user.php --username=$MOODLE_USERNAME --password=$MOODLE_PASSWORD --email=$MOODLE_EMAIL
     if [ -z "$AUTO_UPDATE_MOODLE" ] || [ "$AUTO_UPDATE_MOODLE" = true ]; then
 
         upgrade_moodle
@@ -230,7 +230,7 @@ fi
 # Check if REDIS_HOST is set and not empty
 if [ -n "$REDIS_HOST" ]; then
     echo "Configuring redis cache..."
-    php83 -d max_input_vars=10000 /var/www/html/admin/cli/configure_redis.php ${REDIS_HOST}
+    php84 -d max_input_vars=10000 /var/www/html/admin/cli/configure_redis.php ${REDIS_HOST}
 fi
 
 # Execute post-install commands if the variable is set

@@ -8,7 +8,7 @@ COPY --chown=nobody rootfs/ /
 
 # crond needs root, so install dcron and cap package and set the capabilities
 # on dcron binary https://github.com/inter169/systs/blob/master/alpine/crond/README.md
-RUN apk add --no-cache dcron libcap php83-exif php83-pecl-redis php83-pecl-igbinary php83-ldap && \
+RUN apk add --no-cache dcron libcap php84-exif php84-pecl-redis php84-pecl-igbinary php84-ldap && \
     chown nobody:nobody /usr/sbin/crond && \
     setcap cap_setgid=ep /usr/sbin/crond
 
