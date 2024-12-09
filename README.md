@@ -3,8 +3,8 @@
 [![Docker Pulls](https://img.shields.io/docker/pulls/erseco/alpine-moodle.svg)](https://hub.docker.com/r/erseco/alpine-moodle/)
 ![Docker Image Size](https://img.shields.io/docker/image-size/erseco/alpine-moodle)
 ![nginx 1.26](https://img.shields.io/badge/nginx-1.26-brightgreen.svg)
-![php 8.3](https://img.shields.io/badge/php-8.3-brightgreen.svg)
-![moodle-4.4.0](https://img.shields.io/badge/moodle-4.4-yellow)
+![php 8.4](https://img.shields.io/badge/php-8.4-brightgreen.svg)
+![moodle-4.5.0](https://img.shields.io/badge/moodle-4.5-yellow)
 ![License MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 <a href="https://www.buymeacoffee.com/erseco"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" height="20px"></a>
 
@@ -16,7 +16,7 @@ Repository: https://github.com/erseco/alpine-moodle
 
 * Built on the lightweight image https://github.com/erseco/alpine-php-webserver
 * Very small Docker image size (+/-70MB)
-* Uses PHP 8.3 for better performance, lower cpu usage & memory footprint
+* Uses PHP 8.4 for better performance, lower cpu usage & memory footprint
 * Support for HA installations: php-redis, php-ldap (also with self-signed certs)
 * Multi-arch support: 386, amd64, arm/v6, arm/v7, arm64, ppc64le, s390x
 * Optimized for 100 concurrent users
@@ -98,7 +98,6 @@ You can define commands to be executed before and after the configuration of Moo
 Example `docker-compose.yml` configuration:
 
 ```yaml
-version: '3'
 services:
   moodle:
     image: erseco/alpine-moodle

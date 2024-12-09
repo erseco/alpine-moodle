@@ -25,14 +25,14 @@ jobs:
 
           if [[ $GITHUB_REF == refs/tags/* ]]; then
             TAGS="$TAGS,${GITHUB_REPOSITORY}:latest"
-          elif [[ $VERSION == "master" ]]; then
+          elif [[ $VERSION == "main" ]]; then
             TAGS="$TAGS,${GITHUB_REPOSITORY}:beta"
           fi
 
           GHCR_TAGS="${GHCR_IMAGE}:${VERSION}"
           if [[ $GITHUB_REF == refs/tags/* ]]; then
             GHCR_TAGS="$GHCR_TAGS,${GHCR_IMAGE}:latest"
-          elif [[ $VERSION == "master" ]]; then
+          elif [[ $VERSION == "main" ]]; then
             GHCR_TAGS="$GHCR_TAGS,${GHCR_IMAGE}:beta"
           fi
 
