@@ -113,16 +113,3 @@ services:
       PRE_CONFIGURE_COMMANDS: "echo 'Running pre-configure commands'"
       POST_CONFIGURE_COMMANDS: "echo 'Running post-configure commands'"
 ```
-
-### Installing Plugins from URL
-
-You can also install Moodle plugins directly from a URL using the `install_plugin.php` script. This can be useful for automating plugin installations during container setup.
-
-Example command:
-
-```sh
-php admin/cli/install_plugin.php --url=https://github.com/mohessaid/moodle_local_plugin/archive/refs/heads/master.zip --run
-```
-
-This command will download and install the specified plugin into your Moodle instance.
-```
