@@ -60,7 +60,10 @@ jobs:
       # Step 4: Set up Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        id: buildx
+        with:
+          driver-opts: |
+            network=host
+
 
       # Step 5: Login to DockerHub
       - name: Login to DockerHub
@@ -96,6 +99,9 @@ jobs:
           platforms: ${{ steps.prepare.outputs.platforms }}
           build-args: |
             MOODLE_VERSION=${{ steps.prepare.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
 
       # Step 9: Push to GitHub Container Registry
       - name: Push to GHCR
@@ -106,6 +112,10 @@ jobs:
           push: true
           tags: ${{ steps.prepare.outputs.ghcr-tags }}
           platforms: ${{ steps.prepare.outputs.platforms }}
+          build-args: |
+            MOODLE_VERSION=${{ steps.prepare.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       # Step 10: Update Docker Hub Description
       - name: Docker Hub Description
