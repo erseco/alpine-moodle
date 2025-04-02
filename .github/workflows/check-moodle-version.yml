@@ -36,38 +36,39 @@ jobs:
         run: |
           IFS=$'\n' read -r -a moodle_tags <<< "${{ env.moodle_tags }}"
           IFS=$'\n' read -r -a existing_tags <<< "${{ env.existing_tags }}"
-          
+
           for tag in "${moodle_tags[@]}"; do
-            # Validate tag format: allow vX.Y.Z with optional suffix
-            if [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9]+)?$ ]]; then
-              tag_exists=false
-              for existing in "${existing_tags[@]}"; do
-                if [ "$existing" == "$tag" ]; then
-                  tag_exists=true
-                  break
-                fi
-              done
-              
-              if [ "$tag_exists" = false ]; then
-                echo "Creating tag: $tag"
-                
-                # Create and push tag
-                git tag "$tag"
-                git push origin "$tag"
-                
-                # Trigger build workflow
-                curl -X POST \
-                  -H "Accept: application/vnd.github.v3+json" \
-                  -H "Authorization: token $GH_PAT" \
-                  https://api.github.com/repos/${{ github.repository }}/actions/workflows/build.yml/dispatches \
-                  -d '{
-                    "ref": "main",
-                    "inputs": {
-                      "moodle_version": "'"$tag"'"
-                    }
-                  }'
+            # Normalize tag format for comparison (remove 'v' prefix if present)
+            normalized_tag=${tag#v}
+            
+            # Check if this version exists in any format in our tags
+            version_exists=false
+            for existing_tag in "${existing_tags[@]}"; do
+              normalized_existing=${existing_tag#v}
+              if [[ "$normalized_tag" == "$normalized_existing" ]]; then
+                version_exists=true
+                break
               fi
-            else
-              echo "Skipping tag (invalid format): $tag"
+            done
+
+            if [[ "$version_exists" == "false" ]]; then
+              echo "Creating tag: $tag"
+              
+              # Create and push tag
+              git tag "$tag"
+              git push origin "$tag"
+
+              # Trigger build workflow
+              curl -X POST \
+                -H "Accept: application/vnd.github.v3+json" \
+                -H "Authorization: token $GH_PAT" \
+                https://api.github.com/repos/${{ github.repository }}/actions/workflows/build.yml/dispatches \
+                -d '{
+                  "ref": "main",
+                  "inputs": {
+                    "moodle_version": "'"$tag"'"
+                  }
+                }'
             fi
           done
+
