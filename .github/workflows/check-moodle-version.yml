@@ -36,16 +36,25 @@ jobs:
         run: |
           IFS=$'\n' read -r -a moodle_tags <<< "${{ env.moodle_tags }}"
           IFS=$'\n' read -r -a existing_tags <<< "${{ env.existing_tags }}"
-
+          
           for tag in "${moodle_tags[@]}"; do
-            if [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-              if [[ ! " ${existing_tags[@]} " =~ " ${tag} " ]]; then
+            # Validate tag format: allow vX.Y.Z with optional suffix
+            if [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9]+)?$ ]]; then
+              tag_exists=false
+              for existing in "${existing_tags[@]}"; do
+                if [ "$existing" == "$tag" ]; then
+                  tag_exists=true
+                  break
+                fi
+              done
+              
+              if [ "$tag_exists" = false ]; then
                 echo "Creating tag: $tag"
                 
                 # Create and push tag
                 git tag "$tag"
                 git push origin "$tag"
-
+                
                 # Trigger build workflow
                 curl -X POST \
                   -H "Accept: application/vnd.github.v3+json" \
@@ -58,5 +67,7 @@ jobs:
                     }
                   }'
               fi
+            else
+              echo "Skipping tag (invalid format): $tag"
             fi
           done
