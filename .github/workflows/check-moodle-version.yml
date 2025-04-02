@@ -34,37 +34,39 @@ jobs:
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
         run: |
+          # Split moodle_tags and existing_tags environment variables into arrays
           IFS=$'\n' read -r -a moodle_tags <<< "${{ env.moodle_tags }}"
           IFS=$'\n' read -r -a existing_tags <<< "${{ env.existing_tags }}"
 
+          # Loop through each tag from the Moodle tags list
           for tag in "${moodle_tags[@]}"; do
-            # Normalize tag format for comparison (remove 'v' prefix if present)
-            normalized_tag=${tag#v}
-            
-            # Check if this version exists in any format in our tags
-            version_exists=false
+            # Process only tags that start with 'v'
+            if [[ "$tag" != v* ]]; then
+              continue
+            fi
+
+            tag_exists=false
+            # Check if the tag already exists in the repository
             for existing_tag in "${existing_tags[@]}"; do
-              normalized_existing=${existing_tag#v}
-              if [[ "$normalized_tag" == "$normalized_existing" ]]; then
-                version_exists=true
+              if [[ "$existing_tag" == "$tag" ]]; then
+                tag_exists=true
                 break
               fi
             done
 
-            if [[ "$version_exists" == "false" ]]; then
+            # If the tag does not exist, create it and trigger the build workflow
+            if [[ "$tag_exists" == "false" ]]; then
               echo "Creating tag: $tag"
-              
-              # Create and push tag
               git tag "$tag"
               git push origin "$tag"
 
-              # Trigger build workflow
+              # Trigger build workflow with correct tag reference
               curl -X POST \
                 -H "Accept: application/vnd.github.v3+json" \
                 -H "Authorization: token $GH_PAT" \
                 https://api.github.com/repos/${{ github.repository }}/actions/workflows/build.yml/dispatches \
                 -d '{
-                  "ref": "main",
+                  "ref": "refs/tags/'"$tag"'",
                   "inputs": {
                     "moodle_version": "'"$tag"'"
                   }
