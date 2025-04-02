@@ -2,6 +2,9 @@ name: buildx
 
 on:
   push:
+    tags:
+      - 'v*'  # Pattern matching all version tags
+    branches:
   pull_request:
   workflow_dispatch:
     inputs:
