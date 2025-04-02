@@ -18,8 +18,19 @@ ENV LD_PRELOAD /usr/lib/preloadable_libiconv.so
 
 USER nobody
 
-# Change MOODLE_XX_STABLE for new versions
-ENV MOODLE_URL=https://github.com/moodle/moodle/archive/MOODLE_405_STABLE.tar.gz \
+# By default, the main branch is used:
+ARG MOODLE_VERSION=main
+
+# Set default environment variables
+# 
+# To install a specific Moodle version, set MOODLE_VERSION to a branch or a release tag.
+# You can find the list of available tags at:
+# https://api.github.com/repos/moodle/moodle/tags
+#
+# Example:
+# MOODLE_VERSION=v4.5.3
+#
+ENV MOODLE_URL=https://github.com/moodle/moodle/tarball/refs/tags/${MOODLE_VERSION}
     LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
     SITE_URL=http://localhost \

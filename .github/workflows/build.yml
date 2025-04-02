@@ -4,7 +4,12 @@ on:
   push:
   pull_request:
   workflow_dispatch:
-    
+    inputs:
+      moodle_version:
+        description: 'Moodle version tag'
+        required: true
+        default: 'main'
+
 jobs:
   buildx:
     runs-on: ubuntu-latest
@@ -17,28 +22,32 @@ jobs:
       - name: Prepare
         id: prepare
         run: |
+          # Get version from input or default to 'main'
+          RAW_VERSION=${{ inputs.moodle_version || 'main' }}
+          
+          # Clean version (remove refs/tags/ prefix if present)
+          CLEAN_VERSION=$(echo "$RAW_VERSION" | sed 's/^refs\/tags\///; s/\//-/g')
+          
           GHCR_IMAGE=ghcr.io/${GITHUB_REPOSITORY}
           DOCKER_PLATFORMS=linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/386,linux/ppc64le,linux/s390x
 
-          VERSION=$(echo ${GITHUB_REF#refs/*/} | sed 's/\//-/g') # Replace / with - in tag name
-          TAGS="${GITHUB_REPOSITORY}:${VERSION}"
+          # Base tags
+          TAGS="${GITHUB_REPOSITORY}:${CLEAN_VERSION}"
+          GHCR_TAGS="${GHCR_IMAGE}:${CLEAN_VERSION}"
 
-          if [[ $GITHUB_REF == refs/tags/* ]]; then
-            TAGS="$TAGS,${GITHUB_REPOSITORY}:latest"
-          elif [[ $VERSION == "main" ]]; then
-            TAGS="$TAGS,${GITHUB_REPOSITORY}:beta"
-          fi
-
-          GHCR_TAGS="${GHCR_IMAGE}:${VERSION}"
-          if [[ $GITHUB_REF == refs/tags/* ]]; then
-            GHCR_TAGS="$GHCR_TAGS,${GHCR_IMAGE}:latest"
-          elif [[ $VERSION == "main" ]]; then
-            GHCR_TAGS="$GHCR_TAGS,${GHCR_IMAGE}:beta"
+          # Add additional tags for specific cases
+          if [[ "$CLEAN_VERSION" == "main" ]]; then
+            TAGS+=",${GITHUB_REPOSITORY}:beta"
+            GHCR_TAGS+=",${GHCR_IMAGE}:beta"
+          elif [[ "$CLEAN_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            TAGS+=",${GITHUB_REPOSITORY}:latest"
+            GHCR_TAGS+=",${GHCR_IMAGE}:latest"
           fi
 
           echo "platforms=${DOCKER_PLATFORMS}" >> $GITHUB_OUTPUT
           echo "tags=${TAGS}" >> $GITHUB_OUTPUT
           echo "ghcr-tags=${GHCR_TAGS}" >> $GITHUB_OUTPUT
+          echo "version=${CLEAN_VERSION}" >> $GITHUB_OUTPUT
 
       # Step 3: Set up QEMU for multi-platform builds
       - name: Set up QEMU
@@ -85,6 +94,8 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.prepare.outputs.tags }}
           platforms: ${{ steps.prepare.outputs.platforms }}
+          build-args: |
+            MOODLE_VERSION=${{ steps.prepare.outputs.version }}
 
       # Step 9: Push to GitHub Container Registry
       - name: Push to GHCR

@@ -1,59 +1,62 @@
-name: Check Moodle Version and Tag
+name: Sync Moodle Tags
 
 on:
   schedule:
-    - cron: '0 0 * * *' # Run this task daily
+    - cron: '0 0 * * *' # Daily at midnight
   workflow_dispatch: # Allows manually triggering
 
 jobs:
-  check-version-and-tag:
+  sync-tags:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Check Moodle Latest Version
-      id: check_moodle
-      run: |
-        LATEST_MOODLE_VERSION=$(curl -s https://api.github.com/repos/moodle/moodle/tags | jq -r '.[0].name')
-        echo "LATEST_MOODLE_VERSION=$LATEST_MOODLE_VERSION" >> $GITHUB_ENV
+      - name: Get Moodle tags
+        id: get-moodle-tags
+        run: |
+          MOODLE_TAGS=$(curl -s -H "Accept: application/vnd.github.v3+json" "https://api.github.com/repos/moodle/moodle/tags" | jq -r '.[].name')
+          echo "moodle_tags<<EOF" >> $GITHUB_ENV
+          echo "$MOODLE_TAGS" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
-    - name: Get Current Version from Git Tags
-      id: get_current_version
-      run: |
-        # Get the latest stable tag (no pre-release)
-        CURRENT_VERSION=$(git tag | grep -vE '(-rc|-beta|-alpha)' | sort -V | tail -n 1)
-        echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_ENV
+      - name: Get existing tags
+        id: get-existing-tags
+        run: |
+          git fetch --tags
+          EXISTING_TAGS=$(git tag -l)
+          echo "existing_tags<<EOF" >> $GITHUB_ENV
+          echo "$EXISTING_TAGS" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
-    - name: Compare Versions
-      id: version_compare
-      uses: madhead/semver-utils@latest
-      with:
-        version: '${{ env.LATEST_MOODLE_VERSION }}'
-        compare-to: '${{ env.CURRENT_VERSION }}'
+      - name: Process missing tags
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          IFS=$'\n' read -rd '' -a moodle_tags <<< "${{ env.moodle_tags }}"
+          IFS=$'\n' read -rd '' -a existing_tags <<< "${{ env.existing_tags }}"
 
-    - name: Create Tag if New
-      if: steps.version_compare.outputs.comparison-result == '>'
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        LATEST_MOODLE_VERSION: ${{ env.LATEST_MOODLE_VERSION }}
-        GH_PAT: ${{ secrets.GH_PAT }}
-      run: |
-        echo "Creating new tag for $LATEST_MOODLE_VERSION"
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git tag $LATEST_MOODLE_VERSION
-        git push origin $LATEST_MOODLE_VERSION
-        curl -X POST \
-          -H "Accept: application/vnd.github.v3+json" \
-          -H "Authorization: token $GH_PAT" \
-          https://api.github.com/repos/${{ github.repository }}/actions/workflows/build.yml/dispatches \
-          -d '{"ref":"refs/tags/'"$LATEST_MOODLE_VERSION"'"}'
+          for tag in "${moodle_tags[@]}"; do
+            if [[ "$tag" =~ ^v[0-9]+ ]]; then
+              if [[ ! " ${existing_tags[@]} " =~ " ${tag} " ]]; then
+                echo "Creating tag: $tag"
+                
+                # Create and push tag
+                git tag "$tag"
+                git push origin "$tag"
 
-    - name: No New Version
-      if: steps.version_compare.outputs.comparison-result != '>'
-      run: echo "Latest version is already tagged or is older."
-
+                # Trigger build workflow
+                curl -X POST \
+                  -H "Accept: application/vnd.github.v3+json" \
+                  -H "Authorization: token $GH_PAT" \
+                  https://api.github.com/repos/${{ github.repository }}/actions/workflows/build.yml/dispatches \
+                  -d '{
+                    "ref": "main",
+                    "inputs": {
+                      "moodle_version": "'"$tag"'"
+                    }
+                  }'
+              fi
+            fi
+          done
