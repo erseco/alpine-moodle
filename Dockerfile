@@ -30,7 +30,7 @@ ARG MOODLE_VERSION=main
 # Example:
 # MOODLE_VERSION=v4.5.3
 #
-ENV MOODLE_URL=https://github.com/moodle/moodle/tarball/refs/tags/${MOODLE_VERSION}
+ENV MOODLE_URL=https://github.com/moodle/moodle/tarball/refs/tags/${MOODLE_VERSION} \
     LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
     SITE_URL=http://localhost \
