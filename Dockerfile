@@ -18,20 +18,11 @@ ENV LD_PRELOAD /usr/lib/preloadable_libiconv.so
 
 USER nobody
 
-# By default, the main branch is used:
+# Moodle version configuration
 ARG MOODLE_VERSION=main
 
 # Set default environment variables
-# 
-# To install a specific Moodle version, set MOODLE_VERSION to a branch or a release tag.
-# You can find the list of available tags at:
-# https://api.github.com/repos/moodle/moodle/tags
-#
-# Example:
-# MOODLE_VERSION=v4.5.3
-#
-ENV MOODLE_URL=https://github.com/moodle/moodle/tarball/refs/tags/${MOODLE_VERSION} \
-    LANG=en_US.UTF-8 \
+ENV LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
     SITE_URL=http://localhost \
     DB_TYPE=pgsql \
@@ -65,5 +56,18 @@ ENV MOODLE_URL=https://github.com/moodle/moodle/tarball/refs/tags/${MOODLE_VERSI
     upload_max_filesize=50M \
     max_input_vars=5000
 
-RUN curl --location $MOODLE_URL | tar xz --strip-components=1 -C /var/www/html/
-
+# To use a specific Moodle version, set MOODLE_VERSION to git release tag.
+# You can find the list of available tags at:
+# https://api.github.com/repos/moodle/moodle/tags
+#
+# Example:
+# MOODLE_VERSION=v4.5.3
+#
+# Download and extract Moodle
+RUN if [ "$MOODLE_VERSION" = "main" ]; then \
+      MOODLE_URL="https://github.com/moodle/moodle/archive/main.tar.gz"; \
+    else \
+      MOODLE_URL="https://github.com/moodle/moodle/tarball/refs/tags/${MOODLE_VERSION}"; \
+    fi && \
+    echo "Downloading Moodle from: $MOODLE_URL" && \
+    curl -L "$MOODLE_URL" | tar xz --strip-components=1 -C /var/www/html/

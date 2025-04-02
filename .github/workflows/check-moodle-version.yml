@@ -38,7 +38,7 @@ jobs:
           IFS=$'\n' read -rd '' -a existing_tags <<< "${{ env.existing_tags }}"
 
           for tag in "${moodle_tags[@]}"; do
-            if [[ "$tag" =~ ^v[0-9]+ ]]; then
+            if [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
               if [[ ! " ${existing_tags[@]} " =~ " ${tag} " ]]; then
                 echo "Creating tag: $tag"
                 
