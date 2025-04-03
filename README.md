@@ -4,7 +4,7 @@
 ![Docker Image Size](https://img.shields.io/docker/image-size/erseco/alpine-moodle)
 ![nginx 1.26](https://img.shields.io/badge/nginx-1.26-brightgreen.svg)
 ![php 8.4](https://img.shields.io/badge/php-8.4-brightgreen.svg)
-![moodle-4.5.0](https://img.shields.io/badge/moodle-4.5-yellow)
+![moodle](https://img.shields.io/badge/moodle-configurable-yellow)
 ![License MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 <a href="https://www.buymeacoffee.com/erseco"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" height="20px"></a>
 
@@ -113,3 +113,19 @@ services:
       PRE_CONFIGURE_COMMANDS: "echo 'Running pre-configure commands'"
       POST_CONFIGURE_COMMANDS: "echo 'Running post-configure commands'"
 ```
+
+## Specifying a Moodle Version
+
+By default, this image uses the latest version of Moodle from the main branch. If you need to use a specific Moodle version, you can specify it using the `MOODLE_VERSION` build argument.
+
+To use a specific version, edit your docker-compose.yml file and uncomment the build section for the moodle service:
+
+```yaml
+moodle:
+  # image: erseco/alpine-moodle
+  build:
+    context: .
+    args:
+      MOODLE_VERSION: v4.5.3  # Replace with your desired version
+```
+You can find the list of available version tags at: https://github.com/moodle/moodle/tags

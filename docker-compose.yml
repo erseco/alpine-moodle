@@ -17,7 +17,11 @@ services:
 
   moodle:
     image: erseco/alpine-moodle
-    build: .
+    # You can specify a specific Moodle version by uncommenting the build section below
+    # build:
+    #   context: .
+    #   args:
+    #     MOODLE_VERSION: v4.5.3  # Set to a specific Moodle version tag
     restart: unless-stopped
     environment:
       LANG: en_US.UTF-8
