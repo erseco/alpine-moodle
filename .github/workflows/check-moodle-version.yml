@@ -1,9 +1,9 @@
 name: Sync Moodle Tags
 
-on:
-  schedule:
-    - cron: '0 0 * * *' # Daily at midnight    
-  workflow_dispatch: # Allows manually triggering
+  on:
+    schedule:
+      - cron: '0 0 * * *' # Daily at midnight    
+    workflow_dispatch: # Allows manually triggering
 
 jobs:
   sync-tags:
@@ -34,41 +34,40 @@ jobs:
           EXISTING_TAGS_FORMATTED=$(echo "$EXISTING_TAGS" | tr '\n' ' ')
           echo "existing_tags=$EXISTING_TAGS_FORMATTED" >> $GITHUB_ENV
 
-       - name: Process missing tags
-          run: |
-            # Convert existing tags to a pattern for quick matching
-            EXISTING_TAGS_PATTERN=" ${{ env.existing_tags }} "
-            # Counter for processed tags
-            PROCESSED=0
-            
-            # Process each Moodle tag
-            for tag in ${{ env.moodle_tags }}; do
-              # Only process version tags starting with 'v'
-              if [[ ! "$tag" =~ ^v ]]; then
-                continue
-              fi
-              
-              # Check if tag exists
-              if [[ "$EXISTING_TAGS_PATTERN" == *" $tag "* ]]; then
-                echo "Tag $tag already exists, skipping"
-                continue
-              fi
-              
-              echo "Creating new tag: $tag"
-              
-              # Create and push tag (only need to do this once)
-              git tag "$tag"
-              git push origin "$tag"
-              
-              # Count processed tag
-              PROCESSED=$((PROCESSED+1))
-            done
-            
-            echo "Process completed. Created $PROCESSED new tags."
-            echo "The buildx workflow will be automatically triggered for these tags."
-            
+      - name: Process missing tags
+        run: |
+          # Convert existing tags to a pattern for quick matching
+          EXISTING_TAGS_PATTERN=" ${{ env.existing_tags }} "
+          # Counter for processed tags
+          PROCESSED=0
           
-    - name: Summary
+          # Process each Moodle tag
+          for tag in ${{ env.moodle_tags }}; do
+            # Only process version tags starting with 'v'
+            if [[ ! "$tag" =~ ^v ]]; then
+              continue
+            fi
+            
+            # Check if tag exists
+            if [[ "$EXISTING_TAGS_PATTERN" == *" $tag "* ]]; then
+              echo "Tag $tag already exists, skipping"
+              continue
+            fi
+            
+            echo "Creating new tag: $tag"
+            
+            # Create and push tag (only need to do this once)
+            git tag "$tag"
+            git push origin "$tag"
+            
+            # Count processed tag
+            PROCESSED=$((PROCESSED+1))
+          done
+          
+          echo "Process completed. Created $PROCESSED new tags."
+          echo "The buildx workflow will be automatically triggered for these tags."
+
+      - name: Summary
         run: |
           echo "# Moodle Tags Synchronization" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
