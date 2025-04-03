@@ -6,12 +6,6 @@ LABEL maintainer="Ernesto Serrano <info@ernesto.es>"
 USER root
 COPY --chown=nobody rootfs/ /
 
-# crond needs root, so install dcron and cap package and set the capabilities
-# on dcron binary https://github.com/inter169/systs/blob/master/alpine/crond/README.md
-RUN apk add --no-cache dcron libcap php84-exif php84-pecl-redis php84-pecl-igbinary php84-ldap && \
-    chown nobody:nobody /usr/sbin/crond && \
-    setcap cap_setgid=ep /usr/sbin/crond
-
 # add a quick-and-dirty hack  to fix https://github.com/erseco/alpine-moodle/issues/26
 RUN apk add gnu-libiconv=1.15-r3 --update-cache --repository http://dl-cdn.alpinelinux.org/alpine/v3.13/community/ --allow-untrusted
 ENV LD_PRELOAD /usr/lib/preloadable_libiconv.so
@@ -71,3 +65,5 @@ RUN if [ "$MOODLE_VERSION" = "main" ]; then \
     fi && \
     echo "Downloading Moodle from: $MOODLE_URL" && \
     curl -L "$MOODLE_URL" | tar xz --strip-components=1 -C /var/www/html/
+
+
