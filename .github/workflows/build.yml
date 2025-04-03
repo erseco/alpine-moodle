@@ -7,6 +7,11 @@ on:
     branches:
       - main
   pull_request:
+  workflow_dispatch:
+    inputs:
+      moodle_version:
+        description: 'Moodle version tag'
+        required: true
 
 jobs:
   buildx:
