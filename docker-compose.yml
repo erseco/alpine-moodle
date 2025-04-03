@@ -16,7 +16,7 @@ services:
       - postgres:/var/lib/postgresql/data
 
   moodle:
-    image: erseco/alpine-moodle:v4.4.7
+    image: erseco/alpine-moodle:4.5.3
     # You can specify a specific Moodle version by uncommenting the build section below
     # build:
     #   context: .
