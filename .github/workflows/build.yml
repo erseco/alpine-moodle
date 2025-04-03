@@ -66,6 +66,7 @@ jobs:
         with:
           format: sarif
           output-file: hadolint-results.sarif
+          no-fail: true
 
       - name: Upload SARIF results
         uses: github/codeql-action/upload-sarif@v3
