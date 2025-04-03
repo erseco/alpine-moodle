@@ -1,2 +1,0 @@
-
-* * * * * /usr/bin/php84  /var/www/html/admin/cli/cron.php > /dev/null
