@@ -34,43 +34,44 @@ jobs:
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
         run: |
-          # Split moodle_tags and existing_tags environment variables into arrays
-          IFS=$'\n' read -r -a moodle_tags <<< "${{ env.moodle_tags }}"
-          IFS=$'\n' read -r -a existing_tags <<< "${{ env.existing_tags }}"
-
-          # Loop through each tag from the Moodle tags list
-          for tag in "${moodle_tags[@]}"; do
-            # Process only tags that start with 'v'
-            if [[ "$tag" != v* ]]; then
+          # Convert existing tags to a pattern for quick matching
+          EXISTING_TAGS_PATTERN=" ${{ env.existing_tags }} "
+          
+          # Process each Moodle tag
+          for tag in ${{ env.moodle_tags }}; do
+            # Only process version tags starting with 'v'
+            if [[ ! "$tag" =~ ^v ]]; then
               continue
             fi
-
-            tag_exists=false
-            # Check if the tag already exists in the repository
-            for existing_tag in "${existing_tags[@]}"; do
-              if [[ "$existing_tag" == "$tag" ]]; then
-                tag_exists=true
-                break
-              fi
-            done
-
-            # If the tag does not exist, create it and trigger the build workflow
-            if [[ "$tag_exists" == "false" ]]; then
-              echo "Creating tag: $tag"
-              git tag "$tag"
-              git push origin "$tag"
-
-              # Trigger build workflow with correct tag reference
-              curl -X POST \
-                -H "Accept: application/vnd.github.v3+json" \
-                -H "Authorization: token $GH_PAT" \
-                https://api.github.com/repos/${{ github.repository }}/actions/workflows/build.yml/dispatches \
-                -d '{
-                  "ref": "refs/tags/'"$tag"'",
-                  "inputs": {
-                    "moodle_version": "'"$tag"'"
-                  }
-                }'
+            
+            # Check if tag exists
+            if [[ "$EXISTING_TAGS_PATTERN" == *" $tag "* ]]; then
+              echo "Tag $tag already exists, skipping"
+              continue
             fi
+            
+            echo "Creating new tag: $tag"
+            
+            # Create and push tag
+            git tag "$tag"
+            git push origin "$tag"
+            
+            # Wait briefly to ensure tag is available
+            sleep 2
+            
+            # Trigger build workflow ON THE TAG (using correct ref format)
+            echo "Triggering build for tag $tag"
+            curl -X POST \
+              -H "Accept: application/vnd.github.v3+json" \
+              -H "Authorization: token $GH_PAT" \
+              https://api.github.com/repos/${{ github.repository }}/actions/workflows/build.yml/dispatches \
+              -d '{
+                "ref": "refs/tags/'"$tag"'",  # <-- Formato correcto como en tu versión anterior
+                "inputs": {
+                  "moodle_version": "'"$tag"'"
+                }
+              }'
+            
+            # Small delay to avoid rate limiting
+            sleep 3
           done
-
