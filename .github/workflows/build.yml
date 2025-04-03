@@ -58,7 +58,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       # Step 6: Lint Dockerfile
       - name: Hadolint Action
