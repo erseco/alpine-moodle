@@ -97,12 +97,6 @@ jobs:
           docker compose version
           docker compose --file docker-compose.test.yml up --exit-code-from sut --timeout 10 --build
 
-      # Step 7: Test the built image
-      - name: Test
-        run: |
-          docker compose version
-          docker compose --file docker-compose.test.yml up --exit-code-from sut --timeout 10 --build
-
       # Step 10: Build and Push to both registries in a single step
       - name: Build and push
         if: github.event_name != 'pull_request'
