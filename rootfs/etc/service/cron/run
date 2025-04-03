@@ -1,5 +1,10 @@
 #!/bin/sh
 
-# pipe stderr to stdout and run cron
+# pipe stderr to stdout and run moodle PHP cron tasks
+
+# This script will keep running for the defined keep-alive time (default 180 seconds)
+# and continuously check for tasks during that period
+# After that time, runit will restart the process automatically
 exec 2>&1
-exec /usr/sbin/crond -f
+cd /var/www/html
+exec /usr/bin/php84 /var/www/html/admin/cli/cron.php
