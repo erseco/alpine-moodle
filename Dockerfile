@@ -6,6 +6,21 @@ LABEL maintainer="Ernesto Serrano <info@ernesto.es>"
 USER root
 COPY --chown=nobody rootfs/ /
 
+# Required packages for use behat
+RUN apk add --no-cache \
+        composer \
+        php83-dom \
+        php83-fileinfo \
+        php83-gd \
+        php83-intl \
+        php83-simplexml \
+        php83-sodium \
+        php83-tokenizer \
+        php83-xml \
+        php83-xmlreader \
+        php83-xmlwriter
+
+
 # add a quick-and-dirty hack  to fix https://github.com/erseco/alpine-moodle/issues/26
 RUN apk add gnu-libiconv=1.15-r3 --update-cache --repository http://dl-cdn.alpinelinux.org/alpine/v3.13/community/ --allow-untrusted
 ENV LD_PRELOAD=/usr/lib/preloadable_libiconv.so
@@ -66,4 +81,5 @@ RUN if [ "$MOODLE_VERSION" = "main" ]; then \
     echo "Downloading Moodle from: $MOODLE_URL" && \
     curl -L "$MOODLE_URL" | tar xz --strip-components=1 -C /var/www/html/
 
-
+# TODO
+RUN php admin/tool/behat/cli/init.php
