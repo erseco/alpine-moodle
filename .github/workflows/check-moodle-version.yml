@@ -1,9 +1,9 @@
 name: Sync Moodle Tags
 
-  on:
-    schedule:
-      - cron: '0 0 * * *' # Daily at midnight    
-    workflow_dispatch: # Allows manually triggering
+on:
+  schedule:
+    - cron: '0 0 * * *' # Daily at midnight    
+  workflow_dispatch: # Allows manually triggering
 
 jobs:
   sync-tags:
