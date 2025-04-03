@@ -16,7 +16,7 @@ services:
       - postgres:/var/lib/postgresql/data
 
   moodle:
-    image: erseco/alpine-moodle
+    image: erseco/alpine-moodle:v4.4.7
     # You can specify a specific Moodle version by uncommenting the build section below
     # build:
     #   context: .
@@ -34,7 +34,7 @@ services:
       DB_USER: moodle
       DB_PASS: moodle
       DB_PREFIX: mdl_
-      REDIS_HOST: redis
+      # REDIS_HOST: redis
       REVERSEPROXY: false
       SSLPROXY: false
       MOODLE_EMAIL: user@example.com
