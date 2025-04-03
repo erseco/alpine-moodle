@@ -35,6 +35,8 @@ jobs:
           echo "existing_tags=$EXISTING_TAGS_FORMATTED" >> $GITHUB_ENV
 
       - name: Process missing tags
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
         run: |
           # Convert existing tags to a pattern for quick matching
           EXISTING_TAGS_PATTERN=" ${{ env.existing_tags }} "
@@ -53,26 +55,26 @@ jobs:
               echo "Tag $tag already exists, skipping"
               continue
             fi
-            
+
+            # Create and push tag (only need to do this once)            
             echo "Creating new tag: $tag"
             
-            # Create and push tag (only need to do this once)
             git tag "$tag"
             git push origin "$tag"
-            
-            # Trigger workflow
+
+            # Trigger build workflow
             echo "Triggering build for tag $tag"
             curl -X POST \
               -H "Accept: application/vnd.github.v3+json" \
-              -H "Authorization: token $GH_TOKEN" \
-              "https://api.github.com/repos/${{ github.repository }}/dispatches" \
-              -d "{
-                \"event_type\": \"build_tag\",
-                \"client_payload\": {
-                  \"tag\": \"$tag\"
+              -H "Authorization: token $GH_PAT" \
+              https://api.github.com/repos/${{ github.repository }}/actions/workflows/build.yml/dispatches \
+              -d '{
+                "ref": "refs/tags/'"$tag"'",
+                "inputs": {
+                  "moodle_version": "'"$tag"'"
                 }
-              }"
-            
+              }'
+
             # Count processed tag
             PROCESSED=$((PROCESSED+1))
           done
