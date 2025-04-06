@@ -1,0 +1,42 @@
+# Treat all text files as UTF-8 with LF endings
+* text=auto eol=lf
+
+# Mark common text file types explicitly
+*.md           text
+*.yml          text
+*.yaml         text
+*.json         text
+Dockerfile     text
+*.sh           text eol=lf
+*.conf         text
+*.php          text eol=lf
+*.js           text
+*.css          text
+*.html         text
+
+# Prevent line-ending conversions for binary files
+*.pem          binary
+*.crt          binary
+*.key          binary
+
+# Executables: prevent line ending changes
+rootfs/usr/local/bin/moosh binary
+rootfs/usr/local/bin/php binary
+
+# Files that are shell scripts but should retain LF line endings
+rootfs/etc/service/cron/run text eol=lf
+
+# Ensure test script keeps LF endings and ignore it in GitHub exports
+run_tests.sh text eol=lf
+run_tests.sh export-ignore
+
+# Docker configuration files
+docker-compose.yml text eol=lf
+docker-compose.test.yml text eol=lf
+
+# Project metadata
+LICENSE   text
+README.md text
+
+# Exclude temporary or local files from exports
+borrar export-ignore

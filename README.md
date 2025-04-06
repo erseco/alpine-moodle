@@ -3,51 +3,62 @@
 [![Docker Pulls](https://img.shields.io/docker/pulls/erseco/alpine-moodle.svg)](https://hub.docker.com/r/erseco/alpine-moodle/)
 ![Docker Image Size](https://img.shields.io/docker/image-size/erseco/alpine-moodle)
 ![nginx 1.26](https://img.shields.io/badge/nginx-1.26-brightgreen.svg)
-![php 8.4](https://img.shields.io/badge/php-8.4-brightgreen.svg)
+![php 8.3](https://img.shields.io/badge/php-8.3-brightgreen.svg)
 ![moodle](https://img.shields.io/badge/moodle-configurable-yellow)
+![moosh 1.27](https://img.shields.io/badge/moosh-1.27-orange)
 ![License MIT](https://img.shields.io/badge/license-MIT-blue.svg)
-<a href="https://www.buymeacoffee.com/erseco"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" height="20px"></a>
+![Build Status](https://github.com/erseco/alpine-moodle/actions/workflows/build.yml/badge.svg)
 
-Moodle setup for Docker, build on [Alpine Linux](http://www.alpinelinux.org/).
-The image is only +/- 70MB large.
+A lightweight Moodle Docker image built on [Alpine Linux](https://alpinelinux.org/). (~100MB)
 
 Repository: https://github.com/erseco/alpine-moodle
 
+**Key Features**
 
-* Built on the lightweight image https://github.com/erseco/alpine-php-webserver
-* Very small Docker image size (+/-70MB)
-* Uses PHP 8.4 for better performance, lower cpu usage & memory footprint
-* Support for HA installations: php-redis, php-ldap (also with self-signed certs)
-* Multi-arch support: 386, amd64, arm/v6, arm/v7, arm64, ppc64le, s390x
-* Optimized for 100 concurrent users
-* Optimized to only use resources when there's traffic (by using PHP-FPM's ondemand PM)
-* Use of runit instead of supervisord to reduce memory footprint
-* Configured cron to run as non-privileged user https://github.com/gliderlabs/docker-alpine/issues/381#issuecomment-621946699
-* docker-compose sample with PostgreSQL and Redis
-* Configuration via ENV variables
-* Easily upgradable to new moodle versions
-* The servers Nginx, PHP-FPM run under a non-privileged user (nobody) to make it more secure
-* The logs of all the services are redirected to the output of the Docker container (visible with `docker logs -f <container name>`)
-* Follows the KISS principle (Keep It Simple, Stupid) to make it easy to understand and adjust the image to your needs
+- Built on the lightweight image https://github.com/erseco/alpine-php-webserver
+- Compact Docker image size (~100MB)
+- Uses PHP 8.3 FPM for better performance, lower cpu usage & memory footprint
+- Includes Composer and [Moosh CLI](https://github.com/tmuras/moosh)
+- Support for HA installations: php-redis, php-ldap (also with self-signed certs)
+- Multi-arch support: 386, amd64, arm/v6, arm/v7, arm64, ppc64le, s390x
+- Optimized for 100 concurrent users
+- Optimized to only use resources when there's traffic (by using PHP-FPM's ondemand PM)
+- Uses `runit` instead of `supervisord` to reduce memory footprint
+- Cron jobs run every 180 seconds by runit
+- Sample `docker compose.yml` with PostgreSQL and Redis
+- Configuration via `ENV` variables
+- Services (`Nginx`, `PHP-FPM` run under a non-privileged user (`nobody`) for improved security
+- Logs are sent to container's STDOUT (`docker logs -f <container>`)
+- Extensible via pre/post configuration hooks  
+- Follows the KISS principle (Keep It Simple, Stupid) to make it easy to understand and adjust the image to your needs
+
 
 ## Usage
 
-Start the Docker containers:
+**From Docker Hub:**
+```bash
+docker compose up
+```
+> Log in using the credentials defined by environment variables.
 
-    docker-compose up
-
-Login on the system using the provided credentials (ENV vars)
+**From GHCR:**
+```yaml
+services:
+  moodle:
+    image: ghcr.io/erseco/alpine-moodle
+    # rest of your config
+```
 
 ## Running Commands as Root
 
-In certain situations, you might need to run commands as `root` within your Moodle container, for example, to install additional packages. You can do this using the `docker-compose exec` command with the `--user root` option. Here's how:
+In certain situations, you might need to run commands as `root` within your Moodle container, for example, to install additional packages. You can do this using the `docker compose exec` command with the `--user root` option. Here's how:
 
 ```bash
-docker-compose exec --user root moodle sh
+docker compose exec --user root moodle sh
 ```
 
 ## Configuration
-Define the ENV variables in docker-compose.yml file
+Define the ENV variables in docker compose.yml file
 
 | Variable Name               | Default              | Description                                                                                    |
 |-----------------------------|----------------------|------------------------------------------------------------------------------------------------|
@@ -91,41 +102,158 @@ Define the ENV variables in docker-compose.yml file
 | PRE_CONFIGURE_COMMANDS      |                      | Commands to run before starting the configuration                                              |
 | POST_CONFIGURE_COMMANDS     |                      | Commands to run after finished the configuration                                               |
 
-## Pre and Post Configuration Commands
+## Minimal docker-compose.yml example
+
+```yaml
+---
+services:
+  postgres:
+    image: postgres:alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_PASSWORD=moodle
+      - POSTGRES_USER=moodle
+      - POSTGRES_DB=moodle
+    volumes:
+      - postgres:/var/lib/postgresql/data
+  moodle:
+    image: erseco/alpine-moodle
+    restart: unless-stopped
+    environment:
+      MOODLE_USERNAME: moodleuser
+      MOODLE_PASSWORD: PLEASE_CHANGEME
+    ports:
+      - 80:8080
+    volumes:
+      - moodledata:/var/www/moodledata
+      - moodlehtml:/var/www/html
+    depends_on:
+      - postgres
+volumes:
+  postgres: null
+  moodledata: null
+  moodlehtml: null
+```
+
+## Advanced Features
+
+### 1. Using Moosh CLI
+
+This image includes [Moosh](https://github.com/tmuras/moosh) — a powerful CLI tool to manage Moodle installations. You can invoke any Moosh command using:
+
+```bash
+docker compose exec moodle moosh <command>
+```
+
+Examples:
+
+#### Upgrade plugin list (required to install)
+```bash
+docker compose exec moodle moosh plugin-list
+```
+
+#### Install a Plugin by Name
+```bash
+docker compose exec moodle moosh plugin-install mod_attendance
+```
+
+> You can force the installation of unsupported plugins with the `--force` option. 
+
+> NOTE:[There is a bug in moosh and the first installation is not working](https://github.com/tmuras/moosh/issues/520), so we recomend calling againt the install function with the `--delete` flag option or use the `module-reinstall` option: eg: `docker compose exec moodle moosh plugin-install --delete theme_almondb` or call `docker compose exec moodle moosh module-reinstall theme_almondb`
+
+#### Backup a Course
+
+Backup course with provided id. By default, logs and grade histories are excluded.
+
+Example: Backup course id=3 into default .mbz file in `/opt/moosh/` directory from container:
+
+```bash
+docker compose exec moodle moosh course-backup 3
+```
+
+#### Create a User
+
+Create a new Moodle user. Provide one or more arguments to create one or more users.
+
+Example: create user "testuser" with the all the optional values
+
+
+```bash
+docker compose exec moodle moosh user-create --password pass --email me@example.com --digest 2 --city Valverde --country ES --institution "IES Garoé" --department "Technology" --firstname "first name" --lastname name testuser
+```
+
+#### Delete a User
+
+Delete user(s) from Moodle. Provide one ore more usernames as arguments.
+
+Example: delete user testuser
+
+```bash
+docker compose exec moodle moosh user-delete testuser
+```
+
+These examples can be included directly in `POST_CONFIGURE_COMMANDS` to automate plugin installation, backups, or any Moosh-supported functionality.
+
+Using Moosh promotes the DRY (Don't Repeat Yourself) principle and leverages a powerful toolset for Moodle administration.
+
+For the full list of commands, visit: https://moosh-online.com/commands/
+
+
+### 2. Pre/Post Configuration Hooks
 
 You can define commands to be executed before and after the configuration of Moodle using the `PRE_CONFIGURE_COMMANDS` and `POST_CONFIGURE_COMMANDS` environment variables. These can be useful for tasks such as installing additional packages or running scripts.
 
-Example `docker-compose.yml` configuration:
-
 ```yaml
-services:
-  moodle:
-    image: erseco/alpine-moodle
-    environment:
-      SITE_URL: "http://localhost"
-      DB_TYPE: "pgsql"
-      DB_HOST: "postgres"
-      DB_PORT: 5432
-      DB_NAME: "moodle"
-      DB_USER: "moodle"
-      MOODLE_USERNAME: "admin"
-      MOODLE_PASSWORD: "admin"
-      PRE_CONFIGURE_COMMANDS: "echo 'Running pre-configure commands'"
-      POST_CONFIGURE_COMMANDS: "echo 'Running post-configure commands'"
+environment:
+  PRE_CONFIGURE_COMMANDS: "cat config-dist.php"
+  POST_CONFIGURE_COMMANDS: |
+    moosh plugin-list
+    moosh plugin-install --delete theme_almondb
+    moosh plugin-install --delete theme_almondb
 ```
 
-## Specifying a Moodle Version
+### 3. Specifying a Moodle Version
 
-By default, this image uses the latest version of Moodle from the main branch. If you need to use a specific Moodle version, you can specify it using the `MOODLE_VERSION` build argument.
+Calling `docker compose build` uses the latest version of Moodle from the main branch. If you need to use a specific Moodle version, you can specify it using the `MOODLE_VERSION` build argument.
 
-To use a specific version, edit your docker-compose.yml file and uncomment the build section for the moodle service:
+To use a specific version, edit the build section for the moodle service in your docker compose.yml file:
 
 ```yaml
 moodle:
-  # image: erseco/alpine-moodle
+  image: erseco/alpine-moodle
   build:
     context: .
     args:
       MOODLE_VERSION: v4.5.3  # Replace with your desired version
 ```
 You can find the list of available version tags at: https://github.com/moodle/moodle/tags
+
+
+### 4. Enabling Test Scenario Generator
+
+Moodle includes a tool to create [test scenarios](https://moodledev.io/general/development/tools/generator#create-a-testing-scenario-using-behat-generators) under `Admin > Development > Create testing scenarios`. To enable it, run the following command, or add it in `POST_CONFIGURE_COMMANDS`:
+
+```bash
+php admin/tool/generator/cli/runtestscenario.php
+```
+
+This tool allows generating all necessary elements for manual testing using `.feature` file syntax.
+
+## Maintenance Tips
+
+**Install Additional Alpine Packages (as root):**
+```bash
+docker compose exec --user root moodle sh -c "apk update && apk add nano"
+```
+
+**Manual Database Upgrade:**
+```bash
+docker compose exec moodle php admin/cli/upgrade.php
+```
+
+**Access Logs:**
+```bash
+docker compose logs -f moodle
+```
+
+

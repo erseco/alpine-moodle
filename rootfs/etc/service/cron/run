@@ -7,4 +7,4 @@
 # After that time, runit will restart the process automatically
 exec 2>&1
 cd /var/www/html
-exec /usr/bin/php84 /var/www/html/admin/cli/cron.php > /dev/null
+exec /usr/bin/php /var/www/html/admin/cli/cron.php > /dev/null

@@ -17,11 +17,16 @@ services:
 
   moodle:
     image: erseco/alpine-moodle
-    # You can specify a specific Moodle version by uncommenting the build section below
-    # build:
-    #   context: .
-    #   args:
-    #     MOODLE_VERSION: v4.5.3  # Set to a specific Moodle version tag
+    build:
+      context: .
+      args:
+        # To use a specific Moodle version, set MOODLE_VERSION to git release tag.
+        # You can find the list of available tags at:
+        # https://api.github.com/repos/moodle/moodle/tags
+        #
+        # Example:
+        # MOODLE_VERSION: v4.5.3
+        MOODLE_VERSION: main
     restart: unless-stopped
     environment:
       LANG: en_US.UTF-8
@@ -34,7 +39,7 @@ services:
       DB_USER: moodle
       DB_PASS: moodle
       DB_PREFIX: mdl_
-      # REDIS_HOST: redis
+      REDIS_HOST: redis
       REVERSEPROXY: false
       SSLPROXY: false
       MOODLE_EMAIL: user@example.com
