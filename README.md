@@ -183,8 +183,7 @@ docker compose exec moodle moosh user-create --password pass --email me@example.
 
 #### Delete a User
 
-Delete user(s) from Moodle. Provide one ore more usernames as arguments.
-
+Delete user(s) from Moodle. Provide one or more usernames as arguments.
 Example: delete user testuser
 
 ```bash
