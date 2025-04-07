@@ -159,8 +159,7 @@ docker compose exec moodle moosh plugin-install mod_attendance
 
 > You can force the installation of unsupported plugins with the `--force` option. 
 
-> NOTE:[There is a bug in moosh and the first installation is not working](https://github.com/tmuras/moosh/issues/520), so we recomend calling againt the install function with the `--delete` flag option or use the `module-reinstall` option: eg: `docker compose exec moodle moosh plugin-install --delete theme_almondb` or call `docker compose exec moodle moosh module-reinstall theme_almondb`
-
+> NOTE:[There is a bug in moosh and the first installation is not working](https://github.com/tmuras/moosh/issues/520), so we recommend calling again the install function with the `--delete` flag option or use the `module-reinstall` option: eg: `docker compose exec moodle moosh plugin-install --delete theme_almondb` or call `docker compose exec moodle moosh module-reinstall theme_almondb`
 #### Backup a Course
 
 Backup course with provided id. By default, logs and grade histories are excluded.
@@ -184,8 +183,7 @@ docker compose exec moodle moosh user-create --password pass --email me@example.
 
 #### Delete a User
 
-Delete user(s) from Moodle. Provide one ore more usernames as arguments.
-
+Delete user(s) from Moodle. Provide one or more usernames as arguments.
 Example: delete user testuser
 
 ```bash
