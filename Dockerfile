@@ -1,13 +1,17 @@
 ARG ARCH=
-FROM ${ARCH}erseco/alpine-php-webserver:latest
+FROM ${ARCH}erseco/alpine-php-webserver:3.20.6
 
 LABEL maintainer="Ernesto Serrano <info@ernesto.es>"
 
 USER root
-COPY --chown=nobody rootfs/ /
+RUN apk add --no-cache composer php83-posix php83-xmlwriter php83-pecl-redis \
+    # Remove alpine cache
+    && rm -rf /var/cache/apk/*
 
 # add a quick-and-dirty hack  to fix https://github.com/erseco/alpine-moodle/issues/26
-RUN apk add gnu-libiconv=1.15-r3 --update-cache --repository http://dl-cdn.alpinelinux.org/alpine/v3.13/community/ --allow-untrusted
+RUN apk add --no-cache gnu-libiconv=1.15-r3 --repository http://dl-cdn.alpinelinux.org/alpine/v3.13/community/ --allow-untrusted \
+    # Remove alpine cache
+    && rm -rf /var/cache/apk/*
 ENV LD_PRELOAD=/usr/lib/preloadable_libiconv.so
 
 USER nobody
@@ -66,4 +70,12 @@ RUN if [ "$MOODLE_VERSION" = "main" ]; then \
     echo "Downloading Moodle from: $MOODLE_URL" && \
     curl -L "$MOODLE_URL" | tar xz --strip-components=1 -C /var/www/html/
 
+USER root
+COPY --chown=nobody rootfs/ /
 
+USER nobody
+
+ENV MOOSH_URL=https://github.com/tmuras/moosh/archive/refs/tags/1.27.tar.gz
+RUN curl -L "$MOOSH_URL" | tar xz --strip-components=1 -C /opt/moosh/
+
+RUN composer install --no-interaction --no-cache --working-dir=/opt/moosh

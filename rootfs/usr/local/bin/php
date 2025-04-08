@@ -1,0 +1,16 @@
+#!/bin/sh
+exec /usr/bin/php83 \
+  -d upload_max_filesize="${upload_max_filesize:-50M}" \
+  -d post_max_size="${post_max_size:-50M}" \
+  -d max_input_vars="${max_input_vars:-5000}" \
+  -d memory_limit="${memory_limit:-128M}" \
+  -d date.timezone="${date_timezone:-UTC}" \
+  -d zlib.output_compression="${zlib_output_compression:-On}" \
+  -d allow_url_fopen="${allow_url_fopen:-On}" \
+  -d allow_url_include="${allow_url_include:-Off}" \
+  -d display_errors="${display_errors:-Off}" \
+  -d file_uploads="${file_uploads:-On}" \
+  -d max_execution_time="${max_execution_time:-0}" \
+  -d max_input_time="${max_input_time:--1}" \
+  -d intl.default_locale="${intl_default_locale:-en_US}" \
+  "$@"
