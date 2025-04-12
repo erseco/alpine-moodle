@@ -7,8 +7,7 @@ if [ -z "$PLUGINS" ]; then
   exit 0
 fi
 
-TEMP_DIR="/var/www/html/tmp_plugins"
-mkdir -p "$TEMP_DIR"
+TEMP_DIR=$(mktemp -d)
 cd "$TEMP_DIR"
 
 # Cleanup function to ensure we don't leave temporary files
