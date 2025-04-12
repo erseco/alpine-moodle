@@ -10,7 +10,7 @@ fi
 mkdir -p /var/www/html/tmp_plugins
 cd /var/www/html/tmp_plugins
 
-# Convertir PLUGINS en lista
+# Convert PLUGINS to a list
 for entry in $PLUGINS; do
   plugin_name=$(echo "$entry" | cut -d '=' -f 1)
   plugin_url=$(echo "$entry" | cut -d '=' -f 2)
@@ -22,20 +22,20 @@ for entry in $PLUGINS; do
   curl -L "$plugin_url" -o "$plugin_name.zip"
   unzip -q "$plugin_name.zip"
 
-  # Mover a la ruta correspondiente
+  # Move to the corresponding path
   case "$plugin_type" in
     mod)    target="/var/www/html/mod/$plugin_subdir" ;;
     block)  target="/var/www/html/blocks/$plugin_subdir" ;;
     theme)  target="/var/www/html/theme/$plugin_subdir" ;;
     local)  target="/var/www/html/local/$plugin_subdir" ;;
     report) target="/var/www/html/report/$plugin_subdir" ;;
-    *)      echo "Tipo desconocido: $plugin_type" && exit 1 ;;
+    *)      echo "Unknown type: $plugin_type" && exit 1 ;;
   esac
 
   if [ -d "$plugin_subdir" ]; then
     mv "$plugin_subdir" "$target"
   else
-    echo "Error: el ZIP no contiene la carpeta esperada '$plugin_subdir'"
+    echo "Error: the ZIP does not contain the expected folder '$plugin_subdir'"
     exit 1
   fi
 done
