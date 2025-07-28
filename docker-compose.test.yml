@@ -4,6 +4,7 @@ services:
     build: .
     environment:
       - SITE_URL=http://app:8080
+      - MOODLE_VERSION=v5.0.1
     depends_on:
       - postgres
 
