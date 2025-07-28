@@ -7,6 +7,15 @@ set -eo pipefail
 # Path to the config.php file
 config_file="/var/www/html/config.php"
 
+# TODO: WIP for moodle 5.1dev
+# Detect public subfolder structure (e.g. /var/www/html/public)
+if [ -d /var/www/html/public ]; then
+    MOODLE_BASE_PATH="/var/www/html/public"
+else
+    MOODLE_BASE_PATH="/var/www/html"
+fi
+MOODLE_BASE_PATH="/var/www/html"
+
 # Function to update or add a configuration value
 update_or_add_config_value() {
     local key="$1"  # The configuration key (e.g., $CFG->wwwroot)
@@ -122,6 +131,9 @@ upgrade_config_file() {
     update_or_add_config_value "\$CFG->sslproxy" "$SSLPROXY"
     update_or_add_config_value "\$CFG->preventexecpath" "true"
 
+    # TODO: WIP for moodle 5.1dev
+    update_or_add_config_value "\$CFG->enableanalytics" "false"
+
     # Check if REDIS_HOST is set and not empty
     if [ -n "$REDIS_HOST" ]; then
         update_or_add_config_value "\$CFG->session_handler_class" '\\core\\session\\redis'
@@ -149,6 +161,9 @@ configure_moodle_settings() {
     php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=noreplyaddress --set="$MOODLE_MAIL_NOREPLY_ADDRESS"
     php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=emailsubjectprefix --set="$MOODLE_MAIL_PREFIX"
 
+    # Added the binary path, but the executable can be not installed
+    # php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=pathtopython --set="/usr/bin/python3"
+
     # Check if DEBUG is set to true
     if [ "${DEBUG:-false}" = "true" ]; then
         echo "Enabling debug mode..."
@@ -168,15 +183,15 @@ final_configurations() {
     chmod 444 config.php
 
     # Fix publicpaths check to point to the internal container on port 8080
-    sed -i 's/wwwroot/wwwroot\ \. \"\:8080\"/g' lib/classes/check/environment/publicpaths.php
+    sed -i 's/wwwroot/wwwroot\ \. \"\:8080\"/g' "$MOODLE_BASE_PATH/lib/classes/check/environment/publicpaths.php"
 }
 
 # Function to upgrade Moodle
 upgrade_moodle() {
     echo "Upgrading moodle..."
-    php -d max_input_vars=10000 /var/www/html/admin/cli/maintenance.php --enable
-    php -d max_input_vars=10000 /var/www/html/admin/cli/upgrade.php --non-interactive --allow-unstable
-    php -d max_input_vars=10000 /var/www/html/admin/cli/maintenance.php --disable
+    php -d max_input_vars=10000 "$MOODLE_BASE_PATH/admin/cli/maintenance.php" --enable
+    php -d max_input_vars=10000 "$MOODLE_BASE_PATH/admin/cli/upgrade.php" --non-interactive --allow-unstable
+    php -d max_input_vars=10000 "$MOODLE_BASE_PATH/admin/cli/maintenance.php" --disable
 }
 
 # Check the availability of the primary database
