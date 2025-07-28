@@ -3,6 +3,16 @@
 putenv('HOME=/tmp');
 chdir('/opt/moosh');
 
+// Set a user agent to avoid 403 errors from Moodle.org (Cloudflare block)
+ini_set('user_agent', 'curl/7.81.0');
+
+// Optional: force the user agent in all HTTP contexts
+stream_context_set_default([
+    'http' => [
+        'user_agent' => 'curl/7.81.0'
+    ]
+]);
+
 // Separate global options and the subcommand
 $script = array_shift($argv);
 

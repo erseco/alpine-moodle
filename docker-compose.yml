@@ -26,7 +26,8 @@ services:
         #
         # Example:
         # MOODLE_VERSION: v4.5.3
-        MOODLE_VERSION: main
+        # MOODLE_VERSION: main # (disabled because moodle 5.1dev has many changes)
+        MOODLE_VERSION: v5.0.1
     restart: unless-stopped
     environment:
       LANG: en_US.UTF-8

@@ -1,7 +1,17 @@
 ---
 services:
   app:
-    build: .
+    build:
+      context: .
+      args:
+        # To use a specific Moodle version, set MOODLE_VERSION to git release tag.
+        # You can find the list of available tags at:
+        # https://api.github.com/repos/moodle/moodle/tags
+        #
+        # Example:
+        # MOODLE_VERSION: v4.5.3
+        # MOODLE_VERSION: main # (disabled because moodle 5.1dev has many changes)
+        MOODLE_VERSION: v5.0.1
     environment:
       - SITE_URL=http://app:8080
     depends_on:
