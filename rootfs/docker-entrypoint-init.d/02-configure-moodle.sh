@@ -7,14 +7,7 @@ set -eo pipefail
 # Path to the config.php file
 config_file="/var/www/html/config.php"
 
-# TODO: WIP for moodle 5.1dev
-# Detect public subfolder structure (e.g. /var/www/html/public)
-if [ -d /var/www/html/public ]; then
-    MOODLE_BASE_PATH="/var/www/html/public"
-else
-    MOODLE_BASE_PATH="/var/www/html"
-fi
-MOODLE_BASE_PATH="/var/www/html"
+MOODLE_PUBLIC_DIR=false
 
 # Function to update or add a configuration value
 update_or_add_config_value() {
@@ -182,16 +175,18 @@ final_configurations() {
     # Avoid writing the config file
     chmod 444 config.php
 
-    # Fix publicpaths check to point to the internal container on port 8080
-    sed -i 's/wwwroot/wwwroot\ \. \"\:8080\"/g' "$MOODLE_BASE_PATH/lib/classes/check/environment/publicpaths.php"
+    # Only patch in Moodle versions prior to 5.1 (i.e. when MOODLE_PUBLIC_DIR is false)
+    if [ "$MOODLE_PUBLIC_DIR" = "false" ]; then
+        sed -i 's/wwwroot/wwwroot\ \. \"\:8080\"/g' /var/www/html/lib/classes/check/environment/publicpaths.php
+    fi
 }
 
 # Function to upgrade Moodle
 upgrade_moodle() {
     echo "Upgrading moodle..."
-    php -d max_input_vars=10000 "$MOODLE_BASE_PATH/admin/cli/maintenance.php" --enable
-    php -d max_input_vars=10000 "$MOODLE_BASE_PATH/admin/cli/upgrade.php" --non-interactive --allow-unstable
-    php -d max_input_vars=10000 "$MOODLE_BASE_PATH/admin/cli/maintenance.php" --disable
+    php -d max_input_vars=10000 /var/www/html/admin/cli/maintenance.php --enable
+    php -d max_input_vars=10000 /var/www/html/admin/cli/upgrade.php --non-interactive --allow-unstable
+    php -d max_input_vars=10000 /var/www/html/admin/cli/maintenance.php --disable
 }
 
 # Check the availability of the primary database
@@ -219,6 +214,21 @@ if [ ! -f "$config_file" ]; then
     generate_config_file
     set_extra_db_settings
 fi
+
+# Detect Moodle >=5.1 (with public/ directory) — do it here, just after config.php exists
+if  [ -d /var/www/html/public ]; then
+    MOODLE_PUBLIC_DIR=true
+    export nginx_root_directory="/var/www/html/public"
+
+    # cat /etc/nginx/nginx.conf
+
+    sed -i 's|root .*;|root /var/www/html/public;|' /etc/nginx/nginx.conf
+
+    # cat /etc/nginx/nginx.conf
+
+
+fi
+
 
 # Upgrade config.php file
 upgrade_config_file
