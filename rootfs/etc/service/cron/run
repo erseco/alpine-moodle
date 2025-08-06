@@ -6,5 +6,13 @@
 # and continuously check for tasks during that period
 # After that time, runit will restart the process automatically
 exec 2>&1
+
+if [ "${RUN_CRON_TASKS:-true}" = "false" ]; then
+  echo "RUN_CRON_TASKS is set to false, skipping cron job."
+  # exit runit service by calling finish
+  # https://smarden.org/runit/runsv.8.html
+  exec /usr/bin/finish
+fi
+
 cd /var/www/html
 exec /usr/bin/php /var/www/html/admin/cli/cron.php > /dev/null
