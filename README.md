@@ -118,7 +118,7 @@ When using a reverse proxy (e.g., Caddy, Traefik, nginx-proxy-manager) that hand
 The key is to tell Moodle that it's behind an SSL-terminating proxy. You can do this with the following environment variable settings:
 
 -   `SITE_URL`: Set this to your **public, external URL** with the `https` scheme (e.g., `https://moodle.example.com`).
--   `REVERSEPROXY`: Set this to `false`. This setting is for when Moodle is accessed via different URLs, which is not the case in a standard reverse proxy setup.
+-   `REVERSEPROXY`: Set this to `false` for most reverse proxy setups. Set to `true` only if your Moodle site is intentionally accessible from multiple different base URLs (for example, if users access the site using different domain names or protocols). In a typical reverse proxy scenario where all users access Moodle through a single public URL, this should remain `false`. See [Moodle's documentation on reverse proxies](https://docs.moodle.org/en/Server_cluster) for more details.
 -   `SSLPROXY`: Set this to `true`. This tells Moodle to trust the `X-Forwarded-Proto` header from your proxy and understand that the connection is secure, even though the internal connection to the Docker container is over HTTP.
 
 ### Example Configuration
