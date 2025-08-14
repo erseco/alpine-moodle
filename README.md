@@ -65,8 +65,8 @@ Define the ENV variables in docker compose.yml file
 | LANG                        | en_US.UTF-8          |                                                                                                |
 | LANGUAGE                    | en_US:en             |                                                                                                |
 | SITE_URL                    | http://localhost     | Sets the public site url                                                                       |
-| REVERSEPROXY                | false                | Enable when setting up advanced reverse proxy |
-| SSLPROXY                    | false                | Disable SSL proxy to avoid site loop. Ej. Cloudfare                                            |
+| REVERSEPROXY                | false                | See [Reverse Proxy Configuration](#reverse-proxy-configuration). |
+| SSLPROXY                    | false                | See [Reverse Proxy Configuration](#reverse-proxy-configuration).                               |
 | REDIS_HOST                  |                      | Set the host of the redis instance. Ej. redis                                         |
 | DB_TYPE                     | pgsql                | mysqli - pgsql - mariadb                                                                       |
 | DB_HOST                     | postgres             | DB_HOST Ej. db container name                                                                  |
@@ -102,6 +102,69 @@ Define the ENV variables in docker compose.yml file
 | PRE_CONFIGURE_COMMANDS      |                      | Commands to run before starting the configuration                                              |
 | POST_CONFIGURE_COMMANDS     |                      | Commands to run after finished the configuration                                               |
 | RUN_CRON_TASKS              | true                 | Set to false to disable the moodle cron job from running automatically                         |
+
+## Reverse Proxy Configuration
+
+When using a reverse proxy (e.g., Caddy, Traefik, nginx-proxy-manager) that handles SSL termination, you might encounter issues like missing CSS or a "too many redirects" error. This is a common problem and can be solved with the correct configuration.
+
+### The Problem
+
+1.  **Missing CSS:** If you set `SITE_URL` to your internal Docker IP (e.g., `http://172.19.0.1:89`), Moodle will generate URLs with this internal address. When your browser, accessing the site via `https://moodle.example.com`, tries to load these assets, it will block them due to mixed content (trying to load `http` content on an `https` page).
+
+2.  **`ERR_TOO_MANY_REDIRECTS`:** If you set `SITE_URL` to your public HTTPS address (e.g., `https://moodle.example.com`) but don't configure the proxy settings correctly, Moodle might get confused about the protocol and enter a redirect loop.
+
+### The Solution
+
+The key is to tell Moodle that it's behind an SSL-terminating proxy. You can do this with the following environment variable settings:
+
+-   `SITE_URL`: Set this to your **public, external URL** with the `https` scheme (e.g., `https://moodle.example.com`).
+-   `REVERSEPROXY`: Set this to `false` for most reverse proxy setups. Set to `true` only if your Moodle site is intentionally accessible from multiple different base URLs (for example, if users access the site using different domain names or protocols). In a typical reverse proxy scenario where all users access Moodle through a single public URL, this should remain `false`. See [Moodle's documentation on reverse proxies](https://docs.moodle.org/en/Server_cluster) for more details.
+-   `SSLPROXY`: Set this to `true`. This tells Moodle to trust the `X-Forwarded-Proto` header from your proxy and understand that the connection is secure, even though the internal connection to the Docker container is over HTTP.
+
+### Example Configuration
+
+Here's an example of a `docker-compose.yml` file and a `Caddyfile` for a reverse proxy setup.
+
+**`docker-compose.yml`**
+
+```yaml
+services:
+  moodle:
+    image: erseco/alpine-moodle
+    restart: unless-stopped
+    environment:
+      SITE_URL: https://moodle.example.com
+      REVERSEPROXY: "false"
+      SSLPROXY: "true"
+      # ... other environment variables
+    # No ports need to be exposed externally, as Caddy will connect
+    # to the container directly via the Docker network.
+    volumes:
+      - moodledata:/var/www/moodledata
+      - moodlehtml:/var/www/html
+    depends_on:
+      - postgres
+
+  # ... other services (postgres, etc.)
+
+volumes:
+  moodledata:
+  moodlehtml:
+```
+
+**`Caddyfile`**
+
+```caddy
+moodle.example.com {
+    reverse_proxy moodle:8080 {
+        header_up Host {host}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Forwarded-For {remote}
+    }
+}
+```
+
+By using this configuration, you can avoid the common pitfalls of running Moodle behind a reverse proxy. For more details, see issue [#101](https://github.com/erseco/alpine-moodle/issues/101).
 
 ## Minimal docker-compose.yml example
 
