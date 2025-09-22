@@ -220,7 +220,7 @@ if [ ! -f "$config_file" ]; then
 fi
 
 # Detect Moodle >=5.1 (with public/ directory) — do it here, just after config.php exists
-if  [ -d /var/www/html/public ]; then
+if [ -d /var/www/html/public ]; then
     MOODLE_PUBLIC_DIR=true
     export nginx_root_directory="/var/www/html/public"
 
