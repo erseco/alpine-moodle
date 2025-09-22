@@ -18,7 +18,11 @@ Repository: https://github.com/erseco/alpine-moodle
 - Built on the lightweight image https://github.com/erseco/alpine-php-webserver
 - Compact Docker image size (~100MB)
 - Uses PHP 8.3 FPM for better performance, lower cpu usage & memory footprint
-- Includes Composer and [Moosh CLI](https://github.com/tmuras/moosh)
+- Includes Composer.
+- Supports Moodle <5.1 and >=5.1 (detects /public directory automatically).
+- Includes Redis session handler support.
+- Includes [Moosh CLI](https://github.com/tmuras/moosh) for Moodle management.
+- Configurable via environment variables (see Dockerfile).
 - Support for HA installations: php-redis, php-ldap (also with self-signed certs)
 - Multi-arch support: 386, amd64, arm/v6, arm/v7, arm64, ppc64le, s390x
 - Optimized for 100 concurrent users
@@ -31,6 +35,25 @@ Repository: https://github.com/erseco/alpine-moodle
 - Logs are sent to container's STDOUT (`docker logs -f <container>`)
 - Extensible via pre/post configuration hooks  
 - Follows the KISS principle (Keep It Simple, Stupid) to make it easy to understand and adjust the image to your needs
+
+## Important notes
+
+- **Change default credentials**: Always override `MOODLE_USERNAME` and `MOODLE_PASSWORD` with secure values.
+- **Moodle ≥ 5.1**: The script automatically reconfigures Nginx to serve files from `/public`.
+- **Moodle < 5.1**: A compatibility patch is applied to `publicpaths.php` to support port mapping inside the container.
+
+### Upgrading from Moodle < 5.1 to ≥ 5.1
+
+Moodle 5.1 introduces a new `/public` directory for all web-accessible files.
+If you are upgrading from 5.0 or earlier:
+
+1. **Back up critical data**:
+   - `config.php`
+   - `moodledata/` directory
+   - Database dump
+2. **Clean old files**: Remove any remaining files under `/var/www/html/` to prevent stale or conflicting code.
+3. **Restore configuration**: Copy back `config.php` and custom plugins/themes to the new codebase.
+4. **Run dependencies**: The container will automatically execute `composer install` when `/public` is detected.
 
 
 ## Usage
