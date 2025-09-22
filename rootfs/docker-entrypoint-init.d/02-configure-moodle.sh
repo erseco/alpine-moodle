@@ -7,6 +7,8 @@ set -eo pipefail
 # Path to the config.php file
 config_file="/var/www/html/config.php"
 
+# Since Moodle 5.1, all web-accessible files are located inside the /public directory.
+# MOODLE_PUBLIC_DIR is set to true if that directory exists, otherwise it is false (for older versions).
 MOODLE_PUBLIC_DIR=false
 
 # Function to update or add a configuration value
@@ -175,7 +177,9 @@ final_configurations() {
     # Avoid writing the config file
     chmod 444 config.php
 
-    # Only patch in Moodle versions prior to 5.1 (i.e. when MOODLE_PUBLIC_DIR is false)
+    # In Moodle versions prior to 5.1, the /public directory does not exist.
+    # In these versions, we patch publicpaths.php to append ":8080" to the wwwroot check
+    # in order to support running behind a custom port inside the container.
     if [ "$MOODLE_PUBLIC_DIR" = "false" ]; then
         sed -i 's/wwwroot/wwwroot\ \. \"\:8080\"/g' /var/www/html/lib/classes/check/environment/publicpaths.php
     fi
@@ -220,15 +224,12 @@ if  [ -d /var/www/html/public ]; then
     MOODLE_PUBLIC_DIR=true
     export nginx_root_directory="/var/www/html/public"
 
-    # cat /etc/nginx/nginx.conf
-
     sed -i 's|root .*;|root /var/www/html/public;|' /etc/nginx/nginx.conf
 
-    # cat /etc/nginx/nginx.conf
-
+    echo "Running composer install for Moodle 5.1+..."
+    composer install --no-dev --classmap-authoritative
 
 fi
-
 
 # Upgrade config.php file
 upgrade_config_file
