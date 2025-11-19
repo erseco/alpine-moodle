@@ -95,6 +95,7 @@ for entry in $PLUGINS; do
     cachestore) target="/var/www/html/cache/stores/$plugin_subdir" ;;
     coresearch) target="/var/www/html/search/engine/$plugin_subdir" ;;
     localcache) target="/var/www/html/local/cache/$plugin_subdir" ;;
+    logstore) target="/var/www/html/admin/tool/log/store/$plugin_subdir" ;;
     *)        
       echo "Warning: Unknown plugin type: $plugin_type"
       echo "Attempting to install in /var/www/html/$plugin_type/$plugin_subdir"
