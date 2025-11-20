@@ -19,7 +19,7 @@ jobs:
     steps:
       # Step 1: Checkout the code
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       # Step 2: Extract metadata for Docker
       - name: Docker meta
