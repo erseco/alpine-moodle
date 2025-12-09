@@ -122,6 +122,7 @@ Define the ENV variables in docker compose.yml file
 | post_max_size               | 50M                  |                                                                                                |
 | upload_max_filesize         | 50M                  |                                                                                                |
 | max_input_vars              | 5000                 |                                                                                                |
+| memory_limit                | 256M                 | PHP memory limit. Increase if encountering memory errors with moosh or large operations        |
 | PRE_CONFIGURE_COMMANDS      |                      | Commands to run before starting the configuration                                              |
 | POST_CONFIGURE_COMMANDS     |                      | Commands to run after finished the configuration                                               |
 | RUN_CRON_TASKS              | true                 | Set to false to disable the moodle cron job from running automatically                         |
@@ -244,7 +245,9 @@ docker compose exec moodle moosh plugin-list
 docker compose exec moodle moosh plugin-install mod_attendance
 ```
 
-> You can force the installation of unsupported plugins with the `--force` option. 
+> You can force the installation of unsupported plugins with the `--force` option.
+> 
+> If you encounter memory errors during plugin installation, increase the `memory_limit` environment variable (default: 256M) in your docker-compose.yml. For example: `memory_limit: 512M` 
 
 > NOTE:[There is a bug in moosh and the first installation is not working](https://github.com/tmuras/moosh/issues/520), so we recommend calling again the install function with the `--delete` flag option or use the `module-reinstall` option: eg: `docker compose exec moodle moosh plugin-install --delete theme_almondb` or call `docker compose exec moodle moosh module-reinstall theme_almondb`
 #### Backup a Course
