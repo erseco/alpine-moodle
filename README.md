@@ -245,7 +245,9 @@ docker compose exec moodle moosh plugin-list
 docker compose exec moodle moosh plugin-install mod_attendance
 ```
 
-> You can force the installation of unsupported plugins with the `--force` option. 
+> You can force the installation of unsupported plugins with the `--force` option.
+> 
+> If you encounter memory errors during plugin installation, increase the `memory_limit` environment variable (default: 256M) in your docker-compose.yml. For example: `memory_limit: 512M` 
 
 > NOTE:[There is a bug in moosh and the first installation is not working](https://github.com/tmuras/moosh/issues/520), so we recommend calling again the install function with the `--delete` flag option or use the `module-reinstall` option: eg: `docker compose exec moodle moosh plugin-install --delete theme_almondb` or call `docker compose exec moodle moosh module-reinstall theme_almondb`
 #### Backup a Course
