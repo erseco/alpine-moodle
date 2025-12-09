@@ -52,7 +52,8 @@ ENV LANG=en_US.UTF-8 \
     client_max_body_size=50M \
     post_max_size=50M \
     upload_max_filesize=50M \
-    max_input_vars=5000
+    max_input_vars=5000 \
+    memory_limit=256M
 
 # To use a specific Moodle version, set MOODLE_VERSION to git release tag.
 # You can find the list of available tags at:

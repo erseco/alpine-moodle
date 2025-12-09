@@ -122,6 +122,7 @@ Define the ENV variables in docker compose.yml file
 | post_max_size               | 50M                  |                                                                                                |
 | upload_max_filesize         | 50M                  |                                                                                                |
 | max_input_vars              | 5000                 |                                                                                                |
+| memory_limit                | 256M                 | PHP memory limit. Increase if encountering memory errors with moosh or large operations        |
 | PRE_CONFIGURE_COMMANDS      |                      | Commands to run before starting the configuration                                              |
 | POST_CONFIGURE_COMMANDS     |                      | Commands to run after finished the configuration                                               |
 | RUN_CRON_TASKS              | true                 | Set to false to disable the moodle cron job from running automatically                         |
