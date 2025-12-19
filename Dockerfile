@@ -76,7 +76,7 @@ COPY --chown=nobody rootfs/ /
 
 USER nobody
 
-ENV MOOSH_URL=https://github.com/tmuras/moosh/archive/refs/tags/1.27.tar.gz
+ENV MOOSH_URL=https://github.com/tmuras/moosh/archive/master.tar.gz
 RUN curl -L "$MOOSH_URL" | tar xz --strip-components=1 -C /opt/moosh/
 
 RUN composer install --no-interaction --no-cache --working-dir=/opt/moosh
