@@ -5,6 +5,7 @@ LABEL maintainer="Ernesto Serrano <info@ernesto.es>"
 
 USER root
 RUN apk add --no-cache composer php83-posix php83-xmlwriter php83-pecl-redis \
+    php83-ldap php83-pecl-igbinary php83-exif \
     # Remove alpine cache
     && rm -rf /var/cache/apk/*
 
