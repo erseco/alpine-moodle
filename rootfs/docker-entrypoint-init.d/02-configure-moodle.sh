@@ -4,6 +4,12 @@
 #
 set -eo pipefail
 
+# Fail fast on invalid Redis auth configuration.
+if [ -n "${REDIS_USER:-}" ] && [ -z "${REDIS_PASSWORD:-}" ]; then
+    echo "ERROR: REDIS_USER requires REDIS_PASSWORD." >&2
+    exit 1
+fi
+
 # Path to the config.php file
 config_file="/var/www/html/config.php"
 
@@ -22,13 +28,14 @@ update_or_add_config_value() {
         return
     fi
 
-    if [ "$value" = 'true' ] || [ "$value" = 'false' ]; then
-        # Handle boolean values without quotes
-        quote=''
-    else
-        # Other values get single-quoted
-        quote="'"
-    fi
+    case "$value" in
+        true|false|\[*)
+            quote=''
+            ;;
+        *)
+            quote="'"
+            ;;
+    esac
 
     if grep -q "$key" "$config_file"; then
         # If the key exists, replace its value
@@ -46,13 +53,21 @@ check_db_availability() {
     local db_host="$1"
     local db_port="$2"
     local db_name="$3"
+    local db_user="$4"
+    local db_pass="$5"
 
     echo "Waiting for $db_host:$db_port to be ready..."
-    while ! nc -w 1 "$db_host" "$db_port" > /dev/null 2>&1; do
-        # Show some progress
-        echo -n '.'
-        sleep 1
-    done
+    if [ "${DB_TYPE:-}" = "pgsql" ] && command -v php >/dev/null 2>&1; then
+        while ! php -r '[$h,$p,$d,$u,$pw]=array_slice($argv,1,5); $cs="host={$h} port={$p} dbname={$d} user={$u} password={$pw} connect_timeout=1"; $c=@pg_connect($cs); if ($c) { pg_close($c); exit(0); } exit(1);' "$db_host" "$db_port" "$db_name" "$db_user" "$db_pass" >/dev/null 2>&1; do
+            echo -n '.'
+            sleep 1
+        done
+    else
+        while ! nc -w 1 "$db_host" "$db_port" > /dev/null 2>&1; do
+            echo -n '.'
+            sleep 1
+        done
+    fi
     echo -e "\n\nGreat, $db_host is ready!"
 }
 
@@ -129,17 +144,8 @@ upgrade_config_file() {
     # TODO: WIP for moodle 5.1dev
     update_or_add_config_value "\$CFG->enableanalytics" "false"
 
-    # Check if REDIS_HOST is set and not empty
-    if [ -n "$REDIS_HOST" ]; then
-        update_or_add_config_value "\$CFG->session_handler_class" '\\core\\session\\redis'
-        update_or_add_config_value "\$CFG->session_redis_host" "$REDIS_HOST"
-        update_or_add_config_value "\$CFG->session_redis_serializer_use_igbinary" "true"
-    else
-        # If REDIS_HOST is not set, remove the configuration lines
-        update_or_add_config_value "\$CFG->session_handler_class" ""
-        update_or_add_config_value "\$CFG->session_redis_host" ""
-        update_or_add_config_value "\$CFG->session_redis_serializer_use_igbinary" ""
-    fi
+    # Configure Redis session settings safely (escaping-safe for any credentials).
+    php -d max_input_vars=10000 /var/www/html/admin/cli/configure_redis_session.php "${REDIS_HOST:-}" "${REDIS_PASSWORD:-}" "${REDIS_USER:-}"
 
 }
 
@@ -194,11 +200,11 @@ upgrade_moodle() {
 }
 
 # Check the availability of the primary database
-check_db_availability "$DB_HOST" "$DB_PORT"
+check_db_availability "$DB_HOST" "$DB_PORT" "$DB_NAME" "$DB_USER" "$DB_PASS"
 
 # Check the availability of the database replica if specified
 if [ -n "$DB_HOST_REPLICA" ]; then
-    check_db_availability "$DB_HOST_REPLICA" "${DB_PORT_REPLICA:-$DB_PORT}"
+    check_db_availability "$DB_HOST_REPLICA" "${DB_PORT_REPLICA:-$DB_PORT}" "$DB_NAME" "${DB_USER_REPLICA:-$DB_USER}" "${DB_PASS_REPLICA:-$DB_PASS}"
 fi
 
 # Execute pre-install commands if the variable is set
@@ -256,7 +262,7 @@ fi
 # Check if REDIS_HOST is set and not empty
 if [ -n "$REDIS_HOST" ]; then
     echo "Configuring redis cache..."
-    php -d max_input_vars=10000 /var/www/html/admin/cli/configure_redis.php ${REDIS_HOST}
+    php -d max_input_vars=10000 /var/www/html/admin/cli/configure_redis.php "${REDIS_HOST}" "${REDIS_PASSWORD}" "${REDIS_USER}"
 fi
 
 # Execute post-install commands if the variable is set

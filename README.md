@@ -91,6 +91,8 @@ Define the ENV variables in docker compose.yml file
 | REVERSEPROXY                | false                | See [Reverse Proxy Configuration](#reverse-proxy-configuration). |
 | SSLPROXY                    | false                | See [Reverse Proxy Configuration](#reverse-proxy-configuration).                               |
 | REDIS_HOST                  |                      | Set the host of the redis instance. Ej. redis                                         |
+| REDIS_PASSWORD              |                      | Redis server password for authentication.                                               |
+| REDIS_USER                  |                      | Redis ACL username (Redis 6+). Requires REDIS_PASSWORD (container will fail fast if set without it). |
 | DB_TYPE                     | pgsql                | mysqli - pgsql - mariadb                                                                       |
 | DB_HOST                     | postgres             | DB_HOST Ej. db container name                                                                  |
 | DB_PORT                     | 5432                 | Postgres=5432 - MySQL=3306                                                                     |
