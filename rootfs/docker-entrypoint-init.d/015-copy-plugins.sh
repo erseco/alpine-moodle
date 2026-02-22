@@ -79,6 +79,7 @@ for entry in $PLUGINS; do
     qbehaviour) target="/var/www/html/question/behaviour/$plugin_subdir" ;;
     qformat) target="/var/www/html/question/format/$plugin_subdir" ;;
     editor) target="/var/www/html/lib/editor/$plugin_subdir" ;;
+    tiny) target="/var/www/html/lib/editor/tiny/plugins/$plugin_subdir" ;;
     atto) target="/var/www/html/lib/editor/atto/plugins/$plugin_subdir" ;;
     tinymce) target="/var/www/html/lib/editor/tinymce/plugins/$plugin_subdir" ;;
     availability) target="/var/www/html/availability/condition/$plugin_subdir" ;;
@@ -91,15 +92,17 @@ for entry in $PLUGINS; do
     customfield) target="/var/www/html/customfield/field/$plugin_subdir" ;;
     paymentgateway) target="/var/www/html/payment/gateway/$plugin_subdir" ;;
     analytics) target="/var/www/html/analytics/indicator/$plugin_subdir" ;;
+    aiprovider) target="/var/www/html/ai/provider/$plugin_subdir" ;;
+    aiplacement) target="/var/www/html/ai/placement/$plugin_subdir" ;;
     cachelock) target="/var/www/html/cache/lock/$plugin_subdir" ;;
     cachestore) target="/var/www/html/cache/stores/$plugin_subdir" ;;
     coresearch) target="/var/www/html/search/engine/$plugin_subdir" ;;
     localcache) target="/var/www/html/local/cache/$plugin_subdir" ;;
     logstore) target="/var/www/html/admin/tool/log/store/$plugin_subdir" ;;
-    *)        
+    *)
       echo "Warning: Unknown plugin type: $plugin_type"
       echo "Attempting to install in /var/www/html/$plugin_type/$plugin_subdir"
-      target="/var/www/html/$plugin_type/$plugin_subdir" 
+      target="/var/www/html/$plugin_type/$plugin_subdir"
       mkdir -p "$(dirname "$target")"
       ;;
   esac
@@ -107,19 +110,19 @@ for entry in $PLUGINS; do
   if [ -d "$plugin_subdir" ]; then
     # Ensure target directory exists
     mkdir -p "$(dirname "$target")"
-    
+
     # Remove existing plugin if it exists
     if [ -d "$target" ]; then
       echo "Removing existing plugin at $target"
       rm -rf "$target"
     fi
-    
+
     # Move plugin to target location
     mv "$plugin_subdir" "$target"
-    
+
     # Set appropriate permissions
     chown -R www-data:www-data "$target" 2>/dev/null || true
-    
+
     echo "Successfully installed $plugin_name to $target"
   else
     echo "Error: the ZIP does not contain the expected folder '$plugin_subdir'"
