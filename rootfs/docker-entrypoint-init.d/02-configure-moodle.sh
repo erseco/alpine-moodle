@@ -4,6 +4,16 @@
 #
 set -eo pipefail
 
+# Fail fast on invalid Redis auth configuration.
+if [ -n "${REDIS_USER:-}" ] && [ -z "${REDIS_PASSWORD:-}" ]; then
+    echo "ERROR: REDIS_USER requires REDIS_PASSWORD." >&2
+    exit 1
+fi
+
+if [ -z "${REDIS_HOST:-}" ] && { [ -n "${REDIS_PASSWORD:-}" ] || [ -n "${REDIS_USER:-}" ]; }; then
+    echo "WARNING: REDIS_PASSWORD/REDIS_USER set but REDIS_HOST is empty; Redis auth will be ignored." >&2
+fi
+
 # Path to the config.php file
 config_file="/var/www/html/config.php"
 
@@ -22,13 +32,14 @@ update_or_add_config_value() {
         return
     fi
 
-    if [ "$value" = 'true' ] || [ "$value" = 'false' ]; then
-        # Handle boolean values without quotes
-        quote=''
-    else
-        # Other values get single-quoted
-        quote="'"
-    fi
+    case "$value" in
+        true|false|\[*)
+            quote=''
+            ;;
+        *)
+            quote="'"
+            ;;
+    esac
 
     if grep -q "$key" "$config_file"; then
         # If the key exists, replace its value
@@ -45,7 +56,6 @@ update_or_add_config_value() {
 check_db_availability() {
     local db_host="$1"
     local db_port="$2"
-    local db_name="$3"
 
     echo "Waiting for $db_host:$db_port to be ready..."
     while ! nc -w 1 "$db_host" "$db_port" > /dev/null 2>&1; do
@@ -134,11 +144,22 @@ upgrade_config_file() {
         update_or_add_config_value "\$CFG->session_handler_class" '\\core\\session\\redis'
         update_or_add_config_value "\$CFG->session_redis_host" "$REDIS_HOST"
         update_or_add_config_value "\$CFG->session_redis_serializer_use_igbinary" "true"
+
+        if [ -n "${REDIS_PASSWORD:-}" ]; then
+            if [ -n "${REDIS_USER:-}" ]; then
+                update_or_add_config_value "\$CFG->session_redis_auth" "['$REDIS_USER', '$REDIS_PASSWORD']"
+            else
+                update_or_add_config_value "\$CFG->session_redis_auth" "$REDIS_PASSWORD"
+            fi
+        else
+            update_or_add_config_value "\$CFG->session_redis_auth" ""
+        fi
     else
         # If REDIS_HOST is not set, remove the configuration lines
         update_or_add_config_value "\$CFG->session_handler_class" ""
         update_or_add_config_value "\$CFG->session_redis_host" ""
         update_or_add_config_value "\$CFG->session_redis_serializer_use_igbinary" ""
+        update_or_add_config_value "\$CFG->session_redis_auth" ""
     fi
 
 }
@@ -256,7 +277,7 @@ fi
 # Check if REDIS_HOST is set and not empty
 if [ -n "$REDIS_HOST" ]; then
     echo "Configuring redis cache..."
-    php -d max_input_vars=10000 /var/www/html/admin/cli/configure_redis.php ${REDIS_HOST}
+    php -d max_input_vars=10000 /var/www/html/admin/cli/configure_redis.php "${REDIS_HOST}" "${REDIS_PASSWORD}" "${REDIS_USER}"
 fi
 
 # Execute post-install commands if the variable is set

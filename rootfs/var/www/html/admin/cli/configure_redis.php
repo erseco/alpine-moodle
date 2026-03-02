@@ -15,19 +15,61 @@ require($configfile);
 // Include CLI libraries
 require_once($CFG->libdir.'/clilib.php');
 
-// Ensure the REDIS_HOST parameter is provided
-if (!isset($argv[1])) {
-    echo "Usage: php configure_redis.php <REDIS_HOST>\n";
-    exit;
+$help = "Configure Redis cache store.\n\n".
+    "Usage:\n".
+    "  php configure_redis.php <REDIS_HOST> [REDIS_PASSWORD] [REDIS_USER]\n".
+    "  php configure_redis.php --host=<REDIS_HOST> [--password=<REDIS_PASSWORD>] [--user=<REDIS_USER>]\n\n".
+    "Notes:\n".
+    "  - If REDIS_USER/--user is provided, REDIS_PASSWORD/--password must also be provided.\n";
+
+$hasoptions = isset($argv[1]) && is_string($argv[1]) && $argv[1] !== '' && $argv[1][0] === '-';
+
+$redis_server = '';
+$redis_password = '';
+$redis_user = '';
+
+if ($hasoptions) {
+    list($options, $unrecognized) = cli_get_params(
+        [
+            'help' => false,
+            'host' => '',
+            'password' => '',
+            'user' => '',
+        ],
+        [
+            'h' => 'help',
+        ]
+    );
+
+    if (!empty($unrecognized)) {
+        cli_error("Unrecognized option(s): ".implode(' ', $unrecognized)."\n\n".$help);
+    }
+
+    if ($options['help']) {
+        echo $help;
+        exit(0);
+    }
+
+    $redis_server = (string)$options['host'];
+    $redis_password = (string)$options['password'];
+    $redis_user = (string)$options['user'];
+} else {
+    if (!isset($argv[1]) || $argv[1] === '') {
+        cli_error($help);
+    }
+    $redis_server = (string)$argv[1];
+    $redis_password = (isset($argv[2]) && $argv[2] !== '') ? (string)$argv[2] : '';
+    $redis_user = (isset($argv[3]) && $argv[3] !== '') ? (string)$argv[3] : '';
 }
 
-$redis_server = $argv[1];
+if ($redis_user !== '' && $redis_password === '') {
+    cli_error('REDIS_USER requires REDIS_PASSWORD.');
+}
 
 // Check if the Redis host is up
 $fp = fsockopen($redis_server, 6379, $errno, $errstr, 5);  // 5-second timeout
 if (!$fp) {
-    echo "Unable to connect to Redis at $redis_server:6379. Error: $errstr ($errno)\n";
-    exit;
+    cli_error("Unable to connect to Redis at {$redis_server}:6379. Error: {$errstr} ({$errno})");
 }
 fclose($fp);
 
@@ -87,13 +129,15 @@ function configure_redis_store($name, $plugin, array $configuration) {
     }
 }
 
-// Execute configuration
-configure_redis_store(
-    'redis1',
-    'redis',
-    [
-        'server'     => $redis_server,
-        'port'       => 6379,
-        'serializer' => 2, // igbinary serializer
-    ]
-);
+// Build cache store configuration
+$config = [
+    'server'     => $redis_server,
+    'port'       => 6379,
+    'serializer' => 2, // igbinary serializer
+];
+
+if ($redis_password !== '') {
+    $config['password'] = $redis_user !== '' ? [$redis_user, $redis_password] : $redis_password;
+}
+
+configure_redis_store('redis1', 'redis', $config);
