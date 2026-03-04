@@ -38,7 +38,7 @@ jobs:
       # Step 3: Set up QEMU for multi-platform builds
       - name: Set up QEMU
         id: qemu
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
         with:
           platforms: all
 
