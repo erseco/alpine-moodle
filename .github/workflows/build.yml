@@ -24,7 +24,7 @@ jobs:
       # Step 2: Extract metadata for Docker
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: |
             ${{ github.repository }}
