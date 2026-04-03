@@ -17,6 +17,12 @@ fi
 # Path to the config.php file
 config_file="/var/www/html/config.php"
 
+# Allow MOODLE_DATABASE_TYPE to override the legacy DB_TYPE variable.
+if [ -n "${MOODLE_DATABASE_TYPE:-}" ]; then
+    echo "Using MOODLE_DATABASE_TYPE=${MOODLE_DATABASE_TYPE} (DB_TYPE=${DB_TYPE})."
+    DB_TYPE="$MOODLE_DATABASE_TYPE"
+fi
+
 # Since Moodle 5.1, all web-accessible files are located inside the /public directory.
 # MOODLE_PUBLIC_DIR is set to true if that directory exists, otherwise it is false (for older versions).
 MOODLE_PUBLIC_DIR=false
@@ -66,20 +72,123 @@ check_db_availability() {
     echo -e "\n\nGreat, $db_host is ready!"
 }
 
+configure_database_mode() {
+    case "$DB_TYPE" in
+        mysqli|mariadb|pgsql)
+            ;;
+        sqlite3)
+            echo "WARNING: SQLite mode is for development/demo/testing only and is not supported for production use."
+
+            DB_SQLITE_PATH="${DB_SQLITE_PATH:-/var/www/moodledata/sqlite/moodle.sqlite}"
+
+            case "$DB_SQLITE_PATH" in
+                /var/www/moodledata/*)
+                    ;;
+                *)
+                    echo "ERROR: DB_SQLITE_PATH must stay inside /var/www/moodledata for safety." >&2
+                    exit 1
+                    ;;
+            esac
+
+            sqlite_dir="$(dirname "$DB_SQLITE_PATH")"
+            mkdir -p "$sqlite_dir" || {
+                echo "ERROR: Unable to create SQLite directory '$sqlite_dir'." >&2
+                exit 1
+            }
+            sqlite_dir="$(readlink -f "$sqlite_dir")"
+            case "$sqlite_dir" in
+                /var/www/moodledata|/var/www/moodledata/*)
+                    ;;
+                *)
+                    echo "ERROR: DB_SQLITE_PATH must resolve inside /var/www/moodledata." >&2
+                    exit 1
+                    ;;
+            esac
+
+            # Moodle's CLI/config stores the SQLite file path in the dbname setting.
+            DB_SQLITE_PATH="$sqlite_dir/$(basename "$DB_SQLITE_PATH")"
+            DB_NAME="$DB_SQLITE_PATH"
+            DB_HOST=''
+            DB_PORT=''
+            DB_USER=''
+            DB_PASS=''
+            DB_HOST_REPLICA=''
+            DB_PORT_REPLICA=''
+            DB_USER_REPLICA=''
+            DB_PASS_REPLICA=''
+            DB_FETCHBUFFERSIZE=''
+            DB_DBHANDLEOPTIONS=false
+
+            chmod 700 "$sqlite_dir"
+            if [ ! -e "$DB_NAME" ]; then
+                touch "$DB_NAME"
+            fi
+            chmod 600 "$DB_NAME"
+
+            echo "Using SQLite database file at $DB_NAME"
+            ;;
+        *)
+            echo "ERROR: Unsupported database type '$DB_TYPE'. Supported values: mysqli, mariadb, pgsql, sqlite3." >&2
+            exit 1
+            ;;
+    esac
+}
+
 # Function to generate config.php file
 generate_config_file() {
     echo "Generating config.php file..."
-    ENV_VAR='var' php -d max_input_vars=10000 /var/www/html/admin/cli/install.php \
+
+    # Moodle's install.php does not recognise sqlite3 as a valid --dbtype,
+    # so we write config.php by hand when using SQLite and then let
+    # install_database.php create the schema afterwards.
+    if [ "$DB_TYPE" = "sqlite3" ]; then
+        cat > "$config_file" <<CFGEOF
+<?php  // Moodle configuration file
+
+unset(\$CFG);
+global \$CFG;
+\$CFG = new stdClass();
+
+\$CFG->dbtype    = 'sqlite3';
+\$CFG->dblibrary = 'pdo';
+\$CFG->dbhost    = '';
+\$CFG->dbname    = '$DB_NAME';
+\$CFG->dbuser    = '';
+\$CFG->dbpass    = '';
+\$CFG->prefix    = '$DB_PREFIX';
+\$CFG->dboptions = array (
+  'dbpersist' => 0,
+  'dbport' => '',
+  'dbsocket' => '',
+  'file' => '$DB_NAME',
+);
+
+\$CFG->wwwroot   = '$SITE_URL';
+\$CFG->dataroot  = '/var/www/moodledata/';
+\$CFG->admin     = 'admin';
+
+\$CFG->directorypermissions = 02777;
+
+require_once(__DIR__ . '/lib/setup.php');
+
+// There is no php closing tag in this file,
+// it is intentional because it prevents trailing whitespace problems!
+CFGEOF
+        echo "config.php generated for SQLite."
+        return
+    fi
+
+    set -- \
         --lang=$MOODLE_LANGUAGE \
         --wwwroot=$SITE_URL \
         --dataroot=/var/www/moodledata/ \
         --dbtype=$DB_TYPE \
-        --dbhost=$DB_HOST \
         --dbname=$DB_NAME \
+        --prefix=$DB_PREFIX \
+        --dbhost=$DB_HOST \
         --dbuser=$DB_USER \
         --dbpass=$DB_PASS \
         --dbport=$DB_PORT \
-        --prefix=$DB_PREFIX \
         --fullname=$MOODLE_SITENAME \
         --shortname=moodle \
         --adminuser=$MOODLE_USERNAME \
@@ -89,6 +198,8 @@ generate_config_file() {
         --agree-license \
         --skip-database \
         --allow-unstable
+
+    ENV_VAR='var' php -d max_input_vars=10000 /var/www/html/admin/cli/install.php "$@"
 }
 
 # Function to install the database
@@ -126,11 +237,22 @@ upgrade_config_file() {
     echo "Upgrading config.php..."
     update_or_add_config_value "\$CFG->wwwroot" "$SITE_URL"
     update_or_add_config_value "\$CFG->dbtype" "$DB_TYPE"
-    update_or_add_config_value "\$CFG->dbhost" "$DB_HOST"
+    if [ "$DB_TYPE" = "sqlite3" ]; then
+        update_or_add_config_value "\$CFG->dblibrary" "pdo"
+    else
+        update_or_add_config_value "\$CFG->dblibrary" "native"
+    fi
+    # For SQLite the host/user/pass/port are empty and must stay as empty
+    # strings in config.php.  update_or_add_config_value removes lines
+    # whose value is empty, so we skip them for SQLite to keep the
+    # entries written during initial config.php generation.
+    if [ "$DB_TYPE" != "sqlite3" ]; then
+        update_or_add_config_value "\$CFG->dbhost" "$DB_HOST"
+        update_or_add_config_value "\$CFG->dbuser" "$DB_USER"
+        update_or_add_config_value "\$CFG->dbpass" "$DB_PASS"
+        update_or_add_config_value "\$CFG->dbport" "$DB_PORT"
+    fi
     update_or_add_config_value "\$CFG->dbname" "$DB_NAME"
-    update_or_add_config_value "\$CFG->dbuser" "$DB_USER"
-    update_or_add_config_value "\$CFG->dbpass" "$DB_PASS"
-    update_or_add_config_value "\$CFG->dbport" "$DB_PORT"
     update_or_add_config_value "\$CFG->prefix" "$DB_PREFIX"
     update_or_add_config_value "\$CFG->reverseproxy" "$REVERSEPROXY"
     update_or_add_config_value "\$CFG->sslproxy" "$SSLPROXY"
@@ -214,11 +336,16 @@ upgrade_moodle() {
     php -d max_input_vars=10000 /var/www/html/admin/cli/maintenance.php --disable
 }
 
+# Normalise the selected database configuration before any checks/install steps.
+configure_database_mode
+
 # Check the availability of the primary database
-check_db_availability "$DB_HOST" "$DB_PORT"
+if [ "$DB_TYPE" != "sqlite3" ]; then
+    check_db_availability "$DB_HOST" "$DB_PORT"
+fi
 
 # Check the availability of the database replica if specified
-if [ -n "$DB_HOST_REPLICA" ]; then
+if [ "$DB_TYPE" != "sqlite3" ] && [ -n "$DB_HOST_REPLICA" ]; then
     check_db_availability "$DB_HOST_REPLICA" "${DB_PORT_REPLICA:-$DB_PORT}"
 fi
 

@@ -21,6 +21,7 @@ Repository: https://github.com/erseco/alpine-moodle
 - Includes Composer.
 - Supports Moodle <5.1 and >=5.1 (detects /public directory automatically).
 - Includes Redis session handler support.
+- Includes optional container-side SQLite support for ultra-lightweight development/demo setups. The required Moodle SQLite patches ([MDL-88218](https://moodle.atlassian.net/browse/MDL-88218)) are applied automatically during the image build for supported Moodle versions (5.0+).
 - Includes [Moosh CLI](https://github.com/tmuras/moosh) for Moodle management.
 - Configurable via environment variables (see Dockerfile).
 - Support for HA installations: php-redis, php-ldap (also with self-signed certs)
@@ -39,6 +40,8 @@ Repository: https://github.com/erseco/alpine-moodle
 ## Important notes
 
 - **Change default credentials**: Always override `MOODLE_USERNAME` and `MOODLE_PASSWORD` with secure values.
+- **SQLite mode is development/demo only**: Enable it with `MOODLE_DATABASE_TYPE=sqlite3`. It skips the external database wait logic and stores the database in `/var/www/moodledata/sqlite/moodle.sqlite` by default. Do not use this mode in production.
+- **SQLite patches**: The image automatically applies the experimental SQLite database driver patches from [ateeducacion/moodle](https://github.com/ateeducacion/moodle/pulls) during the Docker build. Patches are available for Moodle 5.0, 5.1, and main (5.2+). Older Moodle versions do not have SQLite support and the build will print a warning.
 - **Moodle ≥ 5.1**: The script automatically reconfigures Nginx to serve files from `/public`.
 - **Moodle < 5.1**: A compatibility patch is applied to `publicpaths.php` to support port mapping inside the container.
 - **PostgreSQL volumes with `postgres:alpine`**: This repository uses the floating `postgres:alpine` tag, and recent PostgreSQL 18+ image variants expect the named volume to be mounted at `/var/lib/postgresql` instead of `/var/lib/postgresql/data`. If you already have a PostgreSQL volume created with older compose files, follow the official PostgreSQL Docker image documentation in the [`PGDATA` section](https://hub.docker.com/_/postgres) before starting the updated stack to avoid confusion or accidental data reset.
@@ -64,6 +67,15 @@ If you are upgrading from 5.0 or earlier:
 docker compose up
 ```
 > Log in using the credentials defined by environment variables.
+
+**Ultra-lightweight SQLite demo/dev mode:**
+```bash
+docker run -p 80:8080 \
+  -e MOODLE_DATABASE_TYPE=sqlite3 \
+  -v moodledata:/var/www/moodledata \
+  erseco/alpine-moodle
+```
+> No external database required. SQLite patches are pre-applied in the image. This mode is for development, demos, and CI smoke testing only.
 
 **From GHCR:**
 ```yaml
@@ -95,10 +107,12 @@ Define the ENV variables in docker compose.yml file
 | REDIS_PASSWORD              |                      | Redis server password for authentication.                                               |
 | REDIS_USER                  |                      | Redis ACL username (Redis 6+). Requires REDIS_PASSWORD (container will fail fast if set without it). |
 | DB_TYPE                     | pgsql                | mysqli - pgsql - mariadb                                                                       |
+| MOODLE_DATABASE_TYPE        |                      | Optional override for DB_TYPE. Set to `sqlite3` to enable the single-container development/demo mode. |
 | DB_HOST                     | postgres             | DB_HOST Ej. db container name                                                                  |
 | DB_PORT                     | 5432                 | Postgres=5432 - MySQL=3306                                                                     |
 | DB_NAME                     | moodle               |                                                                                                |
 | DB_USER                     | moodle               |                                                                                                |
+| DB_SQLITE_PATH              | /var/www/moodledata/sqlite/moodle.sqlite | SQLite database file path used when `MOODLE_DATABASE_TYPE=sqlite3` or `DB_TYPE=sqlite3`. |
 | DB_FETCHBUFFERSIZE          |                      | Set to 0 if using PostgresSQL poolers like PgBouncer in 'transaction' mode                     |
 | DB_DBHANDLEOPTIONS          | false                | Set to true if using PostgresSQL poolers like PgBouncer which does not support sending options |
 | DB_HOST_REPLICA             |                      | Database hostname of the read-only replica database                                            |
@@ -225,6 +239,35 @@ volumes:
   moodledata: null
   moodlehtml: null
 ```
+
+## SQLite single-container mode
+
+Use SQLite when you want the lightest possible local setup and do not want to run PostgreSQL or MariaDB alongside Moodle.
+
+```yaml
+services:
+  moodle:
+    image: erseco/alpine-moodle
+    restart: unless-stopped
+    environment:
+      MOODLE_DATABASE_TYPE: sqlite3
+      MOODLE_USERNAME: moodleuser
+      MOODLE_PASSWORD: PLEASE_CHANGEME
+    ports:
+      - 8080:8080
+    volumes:
+      - moodledata:/var/www/moodledata
+
+volumes:
+  moodledata: null
+```
+
+Notes:
+
+- SQLite mode automatically skips external database dependency checks.
+- The SQLite database file defaults to `/var/www/moodledata/sqlite/moodle.sqlite`.
+- Existing PostgreSQL/MariaDB configurations remain the default and are unchanged.
+- The required Moodle SQLite patches ([MDL-88218](https://moodle.atlassian.net/browse/MDL-88218)) are applied automatically during the image build for Moodle 5.0, 5.1, and main/5.2+. Older versions will print a build-time warning and sqlite3 mode will not be available.
 
 ## Advanced Features
 

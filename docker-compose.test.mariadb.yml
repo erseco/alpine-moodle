@@ -1,0 +1,34 @@
+---
+services:
+  app:
+    build:
+      context: .
+      args:
+        MOODLE_VERSION: main
+    environment:
+      - SITE_URL=http://app:8080
+      - DB_TYPE=mariadb
+      - DB_HOST=mariadb
+      - DB_PORT=3306
+      - DB_NAME=moodle
+      - DB_USER=moodle
+      - DB_PASS=moodle
+    depends_on:
+      - mariadb
+
+  mariadb:
+    image: mariadb:lts
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      - MYSQL_ROOT_PASSWORD=moodle
+      - MYSQL_DATABASE=moodle
+      - MYSQL_USER=moodle
+      - MYSQL_PASSWORD=moodle
+
+  sut:
+    image: alpine:latest
+    depends_on:
+      - app
+    command: /tmp/run_tests.sh
+    volumes:
+      - "./run_tests.sh:/tmp/run_tests.sh:ro"

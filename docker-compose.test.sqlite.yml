@@ -1,0 +1,26 @@
+---
+services:
+  app:
+    build:
+      context: .
+      args:
+        MOODLE_VERSION: main
+    environment:
+      - SITE_URL=http://app:8080
+      - MOODLE_DATABASE_TYPE=sqlite3
+    volumes:
+      - moodledata:/var/www/moodledata
+
+  sut:
+    image: alpine:latest
+    depends_on:
+      - app
+    environment:
+      - DB_TYPE=sqlite3
+    command: /tmp/run_tests.sh
+    volumes:
+      - "./run_tests.sh:/tmp/run_tests.sh:ro"
+      - moodledata:/var/www/moodledata:ro
+
+volumes:
+  moodledata:
