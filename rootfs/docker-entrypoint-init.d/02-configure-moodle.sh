@@ -18,10 +18,10 @@ fi
 config_file="/var/www/html/config.php"
 
 # Allow MOODLE_DATABASE_TYPE to override the legacy DB_TYPE variable.
-if [ -n "${MOODLE_DATABASE_TYPE:-}" ] && [ "${MOODLE_DATABASE_TYPE}" != "${DB_TYPE}" ]; then
-    echo "MOODLE_DATABASE_TYPE overrides DB_TYPE (${DB_TYPE} -> ${MOODLE_DATABASE_TYPE})."
+if [ -n "${MOODLE_DATABASE_TYPE:-}" ]; then
+    echo "Using MOODLE_DATABASE_TYPE=${MOODLE_DATABASE_TYPE} (DB_TYPE=${DB_TYPE})."
+    DB_TYPE="$MOODLE_DATABASE_TYPE"
 fi
-DB_TYPE="${MOODLE_DATABASE_TYPE:-$DB_TYPE}"
 
 # Since Moodle 5.1, all web-accessible files are located inside the /public directory.
 # MOODLE_PUBLIC_DIR is set to true if that directory exists, otherwise it is false (for older versions).
@@ -81,7 +81,35 @@ configure_database_mode() {
 
             # Container-side SQLite wiring is ready here, but Moodle core still needs
             # the experimental sqlite3 driver support from upstream/patches to work end to end.
-            DB_NAME="${DB_SQLITE_PATH:-/var/www/moodledata/sqlite/moodle.sqlite}"
+            DB_SQLITE_PATH="${DB_SQLITE_PATH:-/var/www/moodledata/sqlite/moodle.sqlite}"
+
+            case "$DB_SQLITE_PATH" in
+                /var/www/moodledata/*)
+                    ;;
+                *)
+                    echo "ERROR: DB_SQLITE_PATH must stay inside /var/www/moodledata for safety." >&2
+                    exit 1
+                    ;;
+            esac
+
+            sqlite_dir="$(dirname "$DB_SQLITE_PATH")"
+            mkdir -p "$sqlite_dir" || {
+                echo "ERROR: Unable to create SQLite directory '$sqlite_dir'." >&2
+                exit 1
+            }
+            sqlite_dir="$(readlink -f "$sqlite_dir")"
+            case "$sqlite_dir" in
+                /var/www/moodledata|/var/www/moodledata/*)
+                    ;;
+                *)
+                    echo "ERROR: DB_SQLITE_PATH must resolve inside /var/www/moodledata." >&2
+                    exit 1
+                    ;;
+            esac
+
+            # Moodle's CLI/config stores the SQLite file path in the dbname setting.
+            DB_SQLITE_PATH="$sqlite_dir/$(basename "$DB_SQLITE_PATH")"
+            DB_NAME="$DB_SQLITE_PATH"
             DB_HOST=''
             DB_PORT=''
             DB_USER=''
@@ -93,8 +121,11 @@ configure_database_mode() {
             DB_FETCHBUFFERSIZE=''
             DB_DBHANDLEOPTIONS=false
 
-            mkdir -p "$(dirname "$DB_NAME")"
-            touch "$DB_NAME"
+            chmod 700 "$sqlite_dir"
+            if [ ! -e "$DB_NAME" ]; then
+                touch "$DB_NAME"
+            fi
+            chmod 600 "$DB_NAME"
 
             echo "Using SQLite database file at $DB_NAME"
             echo "NOTE: The image is ready for SQLite, but the bundled Moodle source must also include experimental sqlite3 support."
@@ -109,45 +140,32 @@ configure_database_mode() {
 # Function to generate config.php file
 generate_config_file() {
     echo "Generating config.php file..."
-    if [ "$DB_TYPE" = "sqlite3" ]; then
-        ENV_VAR='var' php -d max_input_vars=10000 /var/www/html/admin/cli/install.php \
-            --lang=$MOODLE_LANGUAGE \
-            --wwwroot=$SITE_URL \
-            --dataroot=/var/www/moodledata/ \
-            --dbtype=$DB_TYPE \
-            --dbname=$DB_NAME \
-            --prefix=$DB_PREFIX \
-            --fullname=$MOODLE_SITENAME \
-            --shortname=moodle \
-            --adminuser=$MOODLE_USERNAME \
-            --adminpass=$MOODLE_PASSWORD \
-            --adminemail=$MOODLE_EMAIL \
-            --non-interactive \
-            --agree-license \
-            --skip-database \
-            --allow-unstable
-    else
-        ENV_VAR='var' php -d max_input_vars=10000 /var/www/html/admin/cli/install.php \
-            --lang=$MOODLE_LANGUAGE \
-            --wwwroot=$SITE_URL \
-            --dataroot=/var/www/moodledata/ \
-            --dbtype=$DB_TYPE \
+    set -- \
+        --lang=$MOODLE_LANGUAGE \
+        --wwwroot=$SITE_URL \
+        --dataroot=/var/www/moodledata/ \
+        --dbtype=$DB_TYPE \
+        --dbname=$DB_NAME \
+        --prefix=$DB_PREFIX \
+        --fullname=$MOODLE_SITENAME \
+        --shortname=moodle \
+        --adminuser=$MOODLE_USERNAME \
+        --adminpass=$MOODLE_PASSWORD \
+        --adminemail=$MOODLE_EMAIL \
+        --non-interactive \
+        --agree-license \
+        --skip-database \
+        --allow-unstable
+
+    if [ "$DB_TYPE" != "sqlite3" ]; then
+        set -- "$@" \
             --dbhost=$DB_HOST \
-            --dbname=$DB_NAME \
             --dbuser=$DB_USER \
             --dbpass=$DB_PASS \
-            --dbport=$DB_PORT \
-            --prefix=$DB_PREFIX \
-            --fullname=$MOODLE_SITENAME \
-            --shortname=moodle \
-            --adminuser=$MOODLE_USERNAME \
-            --adminpass=$MOODLE_PASSWORD \
-            --adminemail=$MOODLE_EMAIL \
-            --non-interactive \
-            --agree-license \
-            --skip-database \
-            --allow-unstable
+            --dbport=$DB_PORT
     fi
+
+    ENV_VAR='var' php -d max_input_vars=10000 /var/www/html/admin/cli/install.php "$@"
 }
 
 # Function to install the database
