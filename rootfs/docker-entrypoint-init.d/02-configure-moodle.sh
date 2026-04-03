@@ -150,7 +150,7 @@ global \$CFG;
 \$CFG = new stdClass();
 
 \$CFG->dbtype    = 'sqlite3';
-\$CFG->dblibrary = 'native';
+\$CFG->dblibrary = 'pdo';
 \$CFG->dbhost    = '';
 \$CFG->dbname    = '$DB_NAME';
 \$CFG->dbuser    = '';
@@ -160,6 +160,7 @@ global \$CFG;
   'dbpersist' => 0,
   'dbport' => '',
   'dbsocket' => '',
+  'file' => '$DB_NAME',
 );
 
 \$CFG->wwwroot   = '$SITE_URL';
@@ -236,11 +237,22 @@ upgrade_config_file() {
     echo "Upgrading config.php..."
     update_or_add_config_value "\$CFG->wwwroot" "$SITE_URL"
     update_or_add_config_value "\$CFG->dbtype" "$DB_TYPE"
-    update_or_add_config_value "\$CFG->dbhost" "$DB_HOST"
+    if [ "$DB_TYPE" = "sqlite3" ]; then
+        update_or_add_config_value "\$CFG->dblibrary" "pdo"
+    else
+        update_or_add_config_value "\$CFG->dblibrary" "native"
+    fi
+    # For SQLite the host/user/pass/port are empty and must stay as empty
+    # strings in config.php.  update_or_add_config_value removes lines
+    # whose value is empty, so we skip them for SQLite to keep the
+    # entries written during initial config.php generation.
+    if [ "$DB_TYPE" != "sqlite3" ]; then
+        update_or_add_config_value "\$CFG->dbhost" "$DB_HOST"
+        update_or_add_config_value "\$CFG->dbuser" "$DB_USER"
+        update_or_add_config_value "\$CFG->dbpass" "$DB_PASS"
+        update_or_add_config_value "\$CFG->dbport" "$DB_PORT"
+    fi
     update_or_add_config_value "\$CFG->dbname" "$DB_NAME"
-    update_or_add_config_value "\$CFG->dbuser" "$DB_USER"
-    update_or_add_config_value "\$CFG->dbpass" "$DB_PASS"
-    update_or_add_config_value "\$CFG->dbport" "$DB_PORT"
     update_or_add_config_value "\$CFG->prefix" "$DB_PREFIX"
     update_or_add_config_value "\$CFG->reverseproxy" "$REVERSEPROXY"
     update_or_add_config_value "\$CFG->sslproxy" "$SSLPROXY"
