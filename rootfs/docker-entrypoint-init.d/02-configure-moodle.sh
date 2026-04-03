@@ -137,6 +137,46 @@ configure_database_mode() {
 # Function to generate config.php file
 generate_config_file() {
     echo "Generating config.php file..."
+
+    # Moodle's install.php does not recognise sqlite3 as a valid --dbtype,
+    # so we write config.php by hand when using SQLite and then let
+    # install_database.php create the schema afterwards.
+    if [ "$DB_TYPE" = "sqlite3" ]; then
+        cat > "$config_file" <<CFGEOF
+<?php  // Moodle configuration file
+
+unset(\$CFG);
+global \$CFG;
+\$CFG = new stdClass();
+
+\$CFG->dbtype    = 'sqlite3';
+\$CFG->dblibrary = 'native';
+\$CFG->dbhost    = '';
+\$CFG->dbname    = '$DB_NAME';
+\$CFG->dbuser    = '';
+\$CFG->dbpass    = '';
+\$CFG->prefix    = '$DB_PREFIX';
+\$CFG->dboptions = array (
+  'dbpersist' => 0,
+  'dbport' => '',
+  'dbsocket' => '',
+);
+
+\$CFG->wwwroot   = '$SITE_URL';
+\$CFG->dataroot  = '/var/www/moodledata/';
+\$CFG->admin     = 'admin';
+
+\$CFG->directorypermissions = 02777;
+
+require_once(__DIR__ . '/lib/setup.php');
+
+// There is no php closing tag in this file,
+// it is intentional because it prevents trailing whitespace problems!
+CFGEOF
+        echo "config.php generated for SQLite."
+        return
+    fi
+
     set -- \
         --lang=$MOODLE_LANGUAGE \
         --wwwroot=$SITE_URL \
@@ -144,6 +184,10 @@ generate_config_file() {
         --dbtype=$DB_TYPE \
         --dbname=$DB_NAME \
         --prefix=$DB_PREFIX \
+        --dbhost=$DB_HOST \
+        --dbuser=$DB_USER \
+        --dbpass=$DB_PASS \
+        --dbport=$DB_PORT \
         --fullname=$MOODLE_SITENAME \
         --shortname=moodle \
         --adminuser=$MOODLE_USERNAME \
@@ -153,14 +197,6 @@ generate_config_file() {
         --agree-license \
         --skip-database \
         --allow-unstable
-
-    if [ "$DB_TYPE" != "sqlite3" ]; then
-        set -- "$@" \
-            --dbhost=$DB_HOST \
-            --dbuser=$DB_USER \
-            --dbpass=$DB_PASS \
-            --dbport=$DB_PORT
-    fi
 
     ENV_VAR='var' php -d max_input_vars=10000 /var/www/html/admin/cli/install.php "$@"
 }
