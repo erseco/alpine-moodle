@@ -70,7 +70,7 @@ docker compose up
 
 **Ultra-lightweight SQLite demo/dev mode:**
 ```bash
-docker run -p 8080:8080 \
+docker run -p 80:8080 \
   -e MOODLE_DATABASE_TYPE=sqlite3 \
   -v moodledata:/var/www/moodledata \
   erseco/alpine-moodle
