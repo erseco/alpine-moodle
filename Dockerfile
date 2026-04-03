@@ -90,7 +90,9 @@ RUN SQLITE_PATCH_URL="" && \
     esac && \
     if [ -n "$SQLITE_PATCH_URL" ]; then \
       echo "Applying SQLite patches from: $SQLITE_PATCH_URL" && \
-      curl -fsSL "$SQLITE_PATCH_URL" | patch -d /var/www/html -p1 --forward && \
+      curl -fsSL "$SQLITE_PATCH_URL" -o /tmp/sqlite.diff && \
+      patch -d /var/www/html -p1 --forward < /tmp/sqlite.diff && \
+      rm -f /tmp/sqlite.diff && \
       echo "SQLite patches applied successfully."; \
     else \
       echo "WARNING: No SQLite patches available for MOODLE_VERSION=$MOODLE_VERSION (sqlite3 mode will not work)"; \

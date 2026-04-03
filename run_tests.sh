@@ -20,6 +20,7 @@ while [ "$attempt" -le "$max_attempts" ]; do
   status="$(curl --silent --show-error --location --output /tmp/moodle.html --write-out '%{http_code}' http://app:8080/ || true)"
   if [ "$status" = "200" ] && grep -Eiq '(Moodle|name="generator" content="Moodle"|/login/index\.php)' /tmp/moodle.html; then
     echo "Moodle HTTP check passed (attempt ${attempt}/${max_attempts})"
+    # Break to continue with DB-specific checks below.
     break
   fi
 
