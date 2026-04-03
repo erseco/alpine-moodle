@@ -18,13 +18,12 @@ services:
 
   mariadb:
     image: mariadb:lts
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     environment:
       - MYSQL_ROOT_PASSWORD=moodle
       - MYSQL_DATABASE=moodle
       - MYSQL_USER=moodle
       - MYSQL_PASSWORD=moodle
-      - MARIADB_CHARACTER_SET_SERVER=utf8mb4
-      - MARIADB_COLLATION_SERVER=utf8mb4_unicode_ci
 
   sut:
     image: alpine:latest
