@@ -5,7 +5,7 @@ LABEL maintainer="Ernesto Serrano <info@ernesto.es>"
 
 USER root
 RUN apk add --no-cache composer php83-posix php83-xmlwriter php83-pecl-redis \
-    php83-ldap php83-pecl-igbinary php83-exif \
+    php83-ldap php83-pecl-igbinary php83-exif php83-sqlite3 php83-pdo_sqlite \
     # Remove alpine cache
     && rm -rf /var/cache/apk/*
 
@@ -25,12 +25,14 @@ ENV LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
     SITE_URL=http://localhost \
     DB_TYPE=pgsql \
+    MOODLE_DATABASE_TYPE= \
     DB_HOST=postgres \
     DB_PORT=5432 \
     DB_NAME=moodle \
     DB_USER=moodle \
     DB_PASS=moodle \
     DB_PREFIX=mdl_ \
+    DB_SQLITE_PATH=/var/www/moodledata/sqlite/moodle.sqlite \
     DB_DBHANDLEOPTIONS=false \
     REDIS_HOST= \
     REDIS_PASSWORD= \

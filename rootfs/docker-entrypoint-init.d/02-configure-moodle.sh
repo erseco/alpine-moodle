@@ -17,6 +17,12 @@ fi
 # Path to the config.php file
 config_file="/var/www/html/config.php"
 
+# Allow MOODLE_DATABASE_TYPE to override the legacy DB_TYPE variable.
+if [ -n "${MOODLE_DATABASE_TYPE:-}" ] && [ "${MOODLE_DATABASE_TYPE}" != "${DB_TYPE}" ]; then
+    echo "MOODLE_DATABASE_TYPE overrides DB_TYPE (${DB_TYPE} -> ${MOODLE_DATABASE_TYPE})."
+fi
+DB_TYPE="${MOODLE_DATABASE_TYPE:-$DB_TYPE}"
+
 # Since Moodle 5.1, all web-accessible files are located inside the /public directory.
 # MOODLE_PUBLIC_DIR is set to true if that directory exists, otherwise it is false (for older versions).
 MOODLE_PUBLIC_DIR=false
@@ -66,29 +72,82 @@ check_db_availability() {
     echo -e "\n\nGreat, $db_host is ready!"
 }
 
+configure_database_mode() {
+    case "$DB_TYPE" in
+        mysqli|mariadb|pgsql)
+            ;;
+        sqlite3)
+            echo "WARNING: SQLite mode is for development/demo/testing only and is not supported for production use."
+
+            # Container-side SQLite wiring is ready here, but Moodle core still needs
+            # the experimental sqlite3 driver support from upstream/patches to work end to end.
+            DB_NAME="${DB_SQLITE_PATH:-/var/www/moodledata/sqlite/moodle.sqlite}"
+            DB_HOST=''
+            DB_PORT=''
+            DB_USER=''
+            DB_PASS=''
+            DB_HOST_REPLICA=''
+            DB_PORT_REPLICA=''
+            DB_USER_REPLICA=''
+            DB_PASS_REPLICA=''
+            DB_FETCHBUFFERSIZE=''
+            DB_DBHANDLEOPTIONS=false
+
+            mkdir -p "$(dirname "$DB_NAME")"
+            touch "$DB_NAME"
+
+            echo "Using SQLite database file at $DB_NAME"
+            echo "NOTE: The image is ready for SQLite, but the bundled Moodle source must also include experimental sqlite3 support."
+            ;;
+        *)
+            echo "ERROR: Unsupported database type '$DB_TYPE'. Supported values: mysqli, mariadb, pgsql, sqlite3." >&2
+            exit 1
+            ;;
+    esac
+}
+
 # Function to generate config.php file
 generate_config_file() {
     echo "Generating config.php file..."
-    ENV_VAR='var' php -d max_input_vars=10000 /var/www/html/admin/cli/install.php \
-        --lang=$MOODLE_LANGUAGE \
-        --wwwroot=$SITE_URL \
-        --dataroot=/var/www/moodledata/ \
-        --dbtype=$DB_TYPE \
-        --dbhost=$DB_HOST \
-        --dbname=$DB_NAME \
-        --dbuser=$DB_USER \
-        --dbpass=$DB_PASS \
-        --dbport=$DB_PORT \
-        --prefix=$DB_PREFIX \
-        --fullname=$MOODLE_SITENAME \
-        --shortname=moodle \
-        --adminuser=$MOODLE_USERNAME \
-        --adminpass=$MOODLE_PASSWORD \
-        --adminemail=$MOODLE_EMAIL \
-        --non-interactive \
-        --agree-license \
-        --skip-database \
-        --allow-unstable
+    if [ "$DB_TYPE" = "sqlite3" ]; then
+        ENV_VAR='var' php -d max_input_vars=10000 /var/www/html/admin/cli/install.php \
+            --lang=$MOODLE_LANGUAGE \
+            --wwwroot=$SITE_URL \
+            --dataroot=/var/www/moodledata/ \
+            --dbtype=$DB_TYPE \
+            --dbname=$DB_NAME \
+            --prefix=$DB_PREFIX \
+            --fullname=$MOODLE_SITENAME \
+            --shortname=moodle \
+            --adminuser=$MOODLE_USERNAME \
+            --adminpass=$MOODLE_PASSWORD \
+            --adminemail=$MOODLE_EMAIL \
+            --non-interactive \
+            --agree-license \
+            --skip-database \
+            --allow-unstable
+    else
+        ENV_VAR='var' php -d max_input_vars=10000 /var/www/html/admin/cli/install.php \
+            --lang=$MOODLE_LANGUAGE \
+            --wwwroot=$SITE_URL \
+            --dataroot=/var/www/moodledata/ \
+            --dbtype=$DB_TYPE \
+            --dbhost=$DB_HOST \
+            --dbname=$DB_NAME \
+            --dbuser=$DB_USER \
+            --dbpass=$DB_PASS \
+            --dbport=$DB_PORT \
+            --prefix=$DB_PREFIX \
+            --fullname=$MOODLE_SITENAME \
+            --shortname=moodle \
+            --adminuser=$MOODLE_USERNAME \
+            --adminpass=$MOODLE_PASSWORD \
+            --adminemail=$MOODLE_EMAIL \
+            --non-interactive \
+            --agree-license \
+            --skip-database \
+            --allow-unstable
+    fi
 }
 
 # Function to install the database
@@ -214,11 +273,16 @@ upgrade_moodle() {
     php -d max_input_vars=10000 /var/www/html/admin/cli/maintenance.php --disable
 }
 
+# Normalise the selected database configuration before any checks/install steps.
+configure_database_mode
+
 # Check the availability of the primary database
-check_db_availability "$DB_HOST" "$DB_PORT"
+if [ "$DB_TYPE" != "sqlite3" ]; then
+    check_db_availability "$DB_HOST" "$DB_PORT"
+fi
 
 # Check the availability of the database replica if specified
-if [ -n "$DB_HOST_REPLICA" ]; then
+if [ "$DB_TYPE" != "sqlite3" ] && [ -n "$DB_HOST_REPLICA" ]; then
     check_db_availability "$DB_HOST_REPLICA" "${DB_PORT_REPLICA:-$DB_PORT}"
 fi
 
