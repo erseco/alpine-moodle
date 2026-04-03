@@ -13,7 +13,7 @@ services:
       - POSTGRES_USER=moodle
       - POSTGRES_DB=moodle
     volumes:
-      - postgres:/var/lib/postgresql/data
+      - postgres:/var/lib/postgresql
 
   moodle:
     image: erseco/alpine-moodle

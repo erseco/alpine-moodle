@@ -41,6 +41,7 @@ Repository: https://github.com/erseco/alpine-moodle
 - **Change default credentials**: Always override `MOODLE_USERNAME` and `MOODLE_PASSWORD` with secure values.
 - **Moodle ≥ 5.1**: The script automatically reconfigures Nginx to serve files from `/public`.
 - **Moodle < 5.1**: A compatibility patch is applied to `publicpaths.php` to support port mapping inside the container.
+- **PostgreSQL volumes with `postgres:alpine`**: PostgreSQL 18+ stores data under `/var/lib/postgresql`, so the compose examples in this repository now mount `postgres:/var/lib/postgresql`. If you already have a PostgreSQL volume created with older compose files, follow the official PostgreSQL [`PGDATA` migration steps](https://hub.docker.com/_/postgres#pgdata) before starting the updated stack to avoid confusion or accidental data reset.
 
 ### Upgrading from Moodle < 5.1 to ≥ 5.1
 
@@ -205,7 +206,7 @@ services:
       - POSTGRES_USER=moodle
       - POSTGRES_DB=moodle
     volumes:
-      - postgres:/var/lib/postgresql/data
+      - postgres:/var/lib/postgresql
   moodle:
     image: erseco/alpine-moodle
     restart: unless-stopped
@@ -345,5 +346,4 @@ docker compose exec moodle php admin/cli/upgrade.php
 ```bash
 docker compose logs -f moodle
 ```
-
 
