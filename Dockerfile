@@ -4,7 +4,7 @@ FROM ${ARCH}erseco/alpine-php-webserver:3.20
 LABEL maintainer="Ernesto Serrano <info@ernesto.es>"
 
 USER root
-RUN apk add --no-cache composer php83-posix php83-xmlwriter php83-pecl-redis \
+RUN apk add --no-cache composer patch php83-posix php83-xmlwriter php83-pecl-redis \
     php83-ldap php83-pecl-igbinary php83-exif php83-sqlite3 php83-pdo_sqlite \
     # Remove alpine cache
     && rm -rf /var/cache/apk/*
@@ -75,6 +75,26 @@ RUN if [ "$MOODLE_VERSION" = "main" ]; then \
     fi && \
     echo "Downloading Moodle from: $MOODLE_URL" && \
     curl -L "$MOODLE_URL" | tar xz --strip-components=1 -C /var/www/html/
+
+# Apply experimental SQLite patches (MDL-88218) from ateeducacion/moodle.
+# Each Moodle release branch has a matching patch PR:
+#   main / v5.2+  → PR #1 (targets main)
+#   v5.1.x        → PR #2 (targets MOODLE_501_STABLE)
+#   v5.0.x        → PR #3 (targets MOODLE_500_STABLE)
+# Older versions do not have SQLite patches; sqlite3 mode will be unavailable.
+RUN SQLITE_PATCH_URL="" && \
+    case "$MOODLE_VERSION" in \
+      main|v5.2*) SQLITE_PATCH_URL="https://github.com/ateeducacion/moodle/pull/1.diff" ;; \
+      v5.1*)      SQLITE_PATCH_URL="https://github.com/ateeducacion/moodle/pull/2.diff" ;; \
+      v5.0*)      SQLITE_PATCH_URL="https://github.com/ateeducacion/moodle/pull/3.diff" ;; \
+    esac && \
+    if [ -n "$SQLITE_PATCH_URL" ]; then \
+      echo "Applying SQLite patches from: $SQLITE_PATCH_URL" && \
+      curl -fsSL "$SQLITE_PATCH_URL" | patch -d /var/www/html -p1 --forward && \
+      echo "SQLite patches applied successfully."; \
+    else \
+      echo "WARNING: No SQLite patches available for MOODLE_VERSION=$MOODLE_VERSION (sqlite3 mode will not work)"; \
+    fi
 
 USER root
 COPY --chown=nobody rootfs/ /

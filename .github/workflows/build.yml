@@ -96,11 +96,21 @@ jobs:
         run: |
           docker buildx build --load .
 
-      # Step 9: Test the built image
-      - name: Test
+      # Step 9: Test the built image with PostgreSQL (default)
+      - name: Test (PostgreSQL)
         run: |
           docker compose version
           docker compose --file docker-compose.test.yml up --exit-code-from sut --timeout 10 --build
+
+      # Step 9b: Test with MariaDB
+      - name: Test (MariaDB)
+        run: |
+          docker compose --file docker-compose.test.mariadb.yml up --exit-code-from sut --timeout 10 --build
+
+      # Step 9c: Test with SQLite
+      - name: Test (SQLite)
+        run: |
+          docker compose --file docker-compose.test.sqlite.yml up --exit-code-from sut --timeout 10 --build
 
       # Step 10: Build and Push to both registries in a single step
       - name: Build and push

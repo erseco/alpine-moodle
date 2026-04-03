@@ -21,7 +21,7 @@ Repository: https://github.com/erseco/alpine-moodle
 - Includes Composer.
 - Supports Moodle <5.1 and >=5.1 (detects /public directory automatically).
 - Includes Redis session handler support.
-- Includes optional container-side SQLite support for ultra-lightweight development/demo setups.
+- Includes optional container-side SQLite support for ultra-lightweight development/demo setups. The required Moodle SQLite patches ([MDL-88218](https://moodle.atlassian.net/browse/MDL-88218)) are applied automatically during the image build for supported Moodle versions (5.0+).
 - Includes [Moosh CLI](https://github.com/tmuras/moosh) for Moodle management.
 - Configurable via environment variables (see Dockerfile).
 - Support for HA installations: php-redis, php-ldap (also with self-signed certs)
@@ -41,7 +41,7 @@ Repository: https://github.com/erseco/alpine-moodle
 
 - **Change default credentials**: Always override `MOODLE_USERNAME` and `MOODLE_PASSWORD` with secure values.
 - **SQLite mode is development/demo only**: Enable it with `MOODLE_DATABASE_TYPE=sqlite3`. It skips the external database wait logic and stores the database in `/var/www/moodledata/sqlite/moodle.sqlite` by default. Do not use this mode in production.
-- **Upstream Moodle dependency**: This image now installs the required PHP SQLite extensions and wires the container startup for SQLite. However, the image still downloads upstream `moodle/moodle` tarballs, so full SQLite operation depends on the selected Moodle source including the experimental upstream SQLite patches/work tracked in [MDL-88218](https://moodle.atlassian.net/browse/MDL-88218).
+- **SQLite patches**: The image automatically applies the experimental SQLite database driver patches from [ateeducacion/moodle](https://github.com/ateeducacion/moodle/pulls) during the Docker build. Patches are available for Moodle 5.0, 5.1, and main (5.2+). Older Moodle versions do not have SQLite support and the build will print a warning.
 - **Moodle ≥ 5.1**: The script automatically reconfigures Nginx to serve files from `/public`.
 - **Moodle < 5.1**: A compatibility patch is applied to `publicpaths.php` to support port mapping inside the container.
 - **PostgreSQL volumes with `postgres:alpine`**: This repository uses the floating `postgres:alpine` tag, and recent PostgreSQL 18+ image variants expect the named volume to be mounted at `/var/lib/postgresql` instead of `/var/lib/postgresql/data`. If you already have a PostgreSQL volume created with older compose files, follow the official PostgreSQL Docker image documentation in the [`PGDATA` section](https://hub.docker.com/_/postgres) before starting the updated stack to avoid confusion or accidental data reset.
@@ -75,7 +75,7 @@ docker run -p 8080:8080 \
   -v moodledata:/var/www/moodledata \
   erseco/alpine-moodle
 ```
-> This mode is intended for development, demos, and CI smoke testing only. It requires a Moodle build that includes experimental `sqlite3` support.
+> No external database required. SQLite patches are pre-applied in the image. This mode is for development, demos, and CI smoke testing only.
 
 **From GHCR:**
 ```yaml
@@ -267,7 +267,7 @@ Notes:
 - SQLite mode automatically skips external database dependency checks.
 - The SQLite database file defaults to `/var/www/moodledata/sqlite/moodle.sqlite`.
 - Existing PostgreSQL/MariaDB configurations remain the default and are unchanged.
-- SQLite support in Moodle core is still experimental upstream, so if the selected Moodle tarball does not contain the required `sqlite3` driver patches, Moodle installation will still fail even though the container is configured correctly.
+- The required Moodle SQLite patches ([MDL-88218](https://moodle.atlassian.net/browse/MDL-88218)) are applied automatically during the image build for Moodle 5.0, 5.1, and main/5.2+. Older versions will print a build-time warning and sqlite3 mode will not be available.
 
 ## Advanced Features
 

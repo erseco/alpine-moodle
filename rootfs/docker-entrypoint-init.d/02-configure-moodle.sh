@@ -79,8 +79,6 @@ configure_database_mode() {
         sqlite3)
             echo "WARNING: SQLite mode is for development/demo/testing only and is not supported for production use."
 
-            # Container-side SQLite wiring is ready here, but Moodle core still needs
-            # the experimental sqlite3 driver support from upstream/patches to work end to end.
             DB_SQLITE_PATH="${DB_SQLITE_PATH:-/var/www/moodledata/sqlite/moodle.sqlite}"
 
             case "$DB_SQLITE_PATH" in
@@ -128,7 +126,6 @@ configure_database_mode() {
             chmod 600 "$DB_NAME"
 
             echo "Using SQLite database file at $DB_NAME"
-            echo "NOTE: The image is ready for SQLite, but the bundled Moodle source must also include experimental sqlite3 support."
             ;;
         *)
             echo "ERROR: Unsupported database type '$DB_TYPE'. Supported values: mysqli, mariadb, pgsql, sqlite3." >&2

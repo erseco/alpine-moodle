@@ -20,7 +20,7 @@ while [ "$attempt" -le "$max_attempts" ]; do
   status="$(curl --silent --show-error --location --output /tmp/moodle.html --write-out '%{http_code}' http://app:8080/ || true)"
   if [ "$status" = "200" ] && grep -Eiq '(Moodle|name="generator" content="Moodle"|/login/index\.php)' /tmp/moodle.html; then
     echo "Moodle HTTP check passed (attempt ${attempt}/${max_attempts})"
-    exit 0
+    break
   fi
 
   echo "Waiting for valid Moodle HTTP response (attempt ${attempt}/${max_attempts}, status=${status})"
@@ -28,7 +28,26 @@ while [ "$attempt" -le "$max_attempts" ]; do
   sleep 2
 done
 
-echo "Moodle HTTP check failed after ${max_attempts} attempts"
-echo "Last response headers/body excerpt:"
-head -n 40 /tmp/moodle.html || true
-exit 1
+if [ "$attempt" -gt "$max_attempts" ]; then
+  echo "Moodle HTTP check failed after ${max_attempts} attempts"
+  echo "Last response headers/body excerpt:"
+  head -n 40 /tmp/moodle.html || true
+  exit 1
+fi
+
+# SQLite-specific verification: check that the database file was created.
+if [ "${DB_TYPE:-}" = "sqlite3" ]; then
+  echo "Verifying SQLite database file..."
+  if [ -f "/var/www/moodledata/sqlite/moodle.sqlite" ]; then
+    echo "SQLite database file verified at /var/www/moodledata/sqlite/moodle.sqlite"
+    ls -la /var/www/moodledata/sqlite/moodle.sqlite
+  else
+    echo "ERROR: SQLite database file not found at /var/www/moodledata/sqlite/moodle.sqlite"
+    echo "Contents of /var/www/moodledata:"
+    ls -laR /var/www/moodledata/ 2>/dev/null || true
+    exit 1
+  fi
+fi
+
+echo "All tests passed."
+exit 0
