@@ -4,3 +4,6 @@
 .DS_Store
 .aider*
 .env
+# Documentation site build artifacts and local Python venvs
+/site
+/.venv

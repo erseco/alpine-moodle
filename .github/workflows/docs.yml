@@ -36,10 +36,10 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: '3.12'
 
       - name: Install Zensical
-        run: pip install zensical
+        run: pip install --default-timeout=120 zensical
 
       - name: Build site
         run: zensical build --clean
