@@ -70,6 +70,73 @@ docker compose up -d
 
 For production deployments (reverse proxy, TLS, Redis, tuning, upgrades), see the [documentation site](https://erseco.github.io/alpine-moodle/).
 
+## Running Commands as Root
+
+In certain situations, you might need to run commands as `root` within your Moodle container, for example, to install additional packages. You can do this using the `docker compose exec` command with the `--user root` option:
+
+```bash
+docker compose exec --user root moodle sh
+```
+
+Example — install an extra Alpine package for debugging:
+
+```bash
+docker compose exec --user root moodle sh -c "apk update && apk add nano curl"
+```
+
+## Configuration
+
+Define the ENV variables in `docker-compose.yml`. The full reference with notes, grouping and defaults lives at <https://erseco.github.io/alpine-moodle/environment-variables/>.
+
+| Variable Name               | Default              | Description |
+|-----------------------------|----------------------|-------------|
+| `LANG`                      | `en_US.UTF-8`        | System locale. |
+| `LANGUAGE`                  | `en_US:en`           | System language fallback chain. |
+| `SITE_URL`                  | `http://localhost`   | Public site URL. Must match what users type in the browser. |
+| `REVERSEPROXY`              | `false`              | Set to `true` only if the site is intentionally served under multiple base URLs. See the [Reverse Proxy](https://erseco.github.io/alpine-moodle/reverse-proxy/) guide. |
+| `SSLPROXY`                  | `false`              | Set to `true` when a reverse proxy terminates TLS. Trusts `X-Forwarded-Proto`. |
+| `REDIS_HOST`                |                      | Hostname of the Redis instance (enables Redis sessions/cache). |
+| `REDIS_PASSWORD`            |                      | Redis password. |
+| `REDIS_USER`                |                      | Redis 6+ ACL user. Requires `REDIS_PASSWORD`. |
+| `DB_TYPE`                   | `pgsql`              | `pgsql`, `mariadb`, `mysqli` or `sqlite3`. |
+| `MOODLE_DATABASE_TYPE`      |                      | Optional override for `DB_TYPE`. Set to `sqlite3` to enable single-container dev/demo mode. |
+| `DB_HOST`                   | `postgres`           | DB container name / hostname. |
+| `DB_PORT`                   | `5432`               | Postgres=5432, MySQL/MariaDB=3306. |
+| `DB_NAME`                   | `moodle`             | Database name. |
+| `DB_USER`                   | `moodle`             | Database user. |
+| `DB_PASS`                   | `moodle`             | Database password. |
+| `DB_SQLITE_PATH`            | `/var/www/moodledata/sqlite/moodle.sqlite` | SQLite file path when using `sqlite3`. |
+| `DB_FETCHBUFFERSIZE`        |                      | Set to `0` with PgBouncer in *transaction* mode. |
+| `DB_DBHANDLEOPTIONS`        | `false`              | Set to `true` with PgBouncer pool modes that reject `SET` options. |
+| `DB_HOST_REPLICA`           |                      | Read-only replica hostname. |
+| `DB_PORT_REPLICA`           |                      | Replica port (falls back to `DB_PORT`). |
+| `DB_USER_REPLICA`           |                      | Replica user (falls back to `DB_USER`). |
+| `DB_PASS_REPLICA`           |                      | Replica password (falls back to `DB_PASS`). |
+| `DB_PREFIX`                 | `mdl_`               | DB table prefix. Do not use numeric values. |
+| `MY_CERTIFICATES`           | `none`               | Base64-encoded LDAP CA bundle. |
+| `MOODLE_EMAIL`              | `user@example.com`   | Admin email. |
+| `MOODLE_LANGUAGE`           | `en`                 | Installer language. |
+| `MOODLE_SITENAME`           | `Dockerized_Moodle`  | Full site name shown on the front page. |
+| `MOODLE_USERNAME`           | `moodleuser`         | Admin username. **Override on first boot.** |
+| `MOODLE_PASSWORD`           | `PLEASE_CHANGEME`    | Admin password. **Override on first boot.** |
+| `SMTP_HOST`                 | `smtp.gmail.com`     | SMTP server. |
+| `SMTP_PORT`                 | `587`                | SMTP port. |
+| `SMTP_USER`                 | `your_email@gmail.com` | SMTP username. |
+| `SMTP_PASSWORD`             | `your_password`      | SMTP password. |
+| `SMTP_PROTOCOL`             | `tls`                | `tls`, `ssl` or empty. |
+| `MOODLE_MAIL_NOREPLY_ADDRESS` | `noreply@localhost` | No-reply address. |
+| `MOODLE_MAIL_PREFIX`        | `[moodle]`           | Email subject prefix. |
+| `AUTO_UPDATE_MOODLE`        | `true`               | Set to `false` to skip `admin/cli/upgrade.php` on container start. |
+| `DEBUG`                     | `false`              | When `true`, enables Moodle `DEVELOPER` debug level. |
+| `client_max_body_size`      | `50M`                | Nginx max request body size. |
+| `post_max_size`             | `50M`                | PHP `post_max_size`. |
+| `upload_max_filesize`       | `50M`                | PHP `upload_max_filesize`. |
+| `max_input_vars`            | `5000`               | PHP `max_input_vars`. Keep high for Moodle course imports. |
+| `memory_limit`              | `256M`               | PHP `memory_limit`. Increase if Moosh plugin installs run out of memory. |
+| `PRE_CONFIGURE_COMMANDS`    |                      | Shell commands run before Moodle configuration. |
+| `POST_CONFIGURE_COMMANDS`   |                      | Shell commands run after Moodle configuration (great for Moosh). |
+| `RUN_CRON_TASKS`            | `true`               | Set to `false` to disable the internal `runit`-managed cron loop. |
+
 ## Key features
 
 - Compact image (~100 MB) built on [`erseco/alpine-php-webserver`](https://github.com/erseco/alpine-php-webserver)
