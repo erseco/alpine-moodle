@@ -4,6 +4,7 @@
 ![Docker Image Size](https://img.shields.io/docker/image-size/erseco/alpine-moodle)
 ![nginx 1.26](https://img.shields.io/badge/nginx-1.26-brightgreen.svg)
 ![php 8.3](https://img.shields.io/badge/php-8.3-brightgreen.svg)
+[![php 8.4 opt-in](https://img.shields.io/badge/php-8.4_opt--in-blue.svg)](#php-84-opt-in-images)
 ![moodle](https://img.shields.io/badge/moodle-configurable-yellow)
 ![moosh 1.27](https://img.shields.io/badge/moosh-1.27-orange)
 ![License MIT](https://img.shields.io/badge/license-MIT-blue.svg)
@@ -140,7 +141,7 @@ Define the ENV variables in `docker-compose.yml`. The full reference with notes,
 ## Key features
 
 - Compact image (~100 MB) built on [`erseco/alpine-php-webserver`](https://github.com/erseco/alpine-php-webserver)
-- PHP 8.3 FPM with `ondemand` process manager — idles near-zero CPU
+- PHP 8.3 FPM with `ondemand` process manager — idles near-zero CPU (opt-in [PHP 8.4 images](#php-84-opt-in-images) available for Moodle 5.x)
 - PostgreSQL, MariaDB/MySQL **or** SQLite (single-container dev mode)
 - Optional Redis session handler
 - Supports Moodle 4.x, 5.0, 5.1+ (auto-detects `/public` layout) and `main`
@@ -150,6 +151,30 @@ Define the ENV variables in `docker-compose.yml`. The full reference with notes,
 - Runs as the non-privileged `nobody` user
 - Logs to `stdout` / `stderr` — just `docker logs -f`
 - Internal cron via `runit` (configurable, or run it externally)
+
+## PHP 8.4 opt-in images
+
+The default `erseco/alpine-moodle` tags currently remain on **PHP 8.3** to preserve compatibility with existing **Moodle 4.5 LTS** installations and avoid breaking existing deployments.
+
+PHP 8.4 images are available as **opt-in** tags for Moodle 5.x and later, identified by a `-php84` suffix:
+
+| Moodle version | PHP 8.4 tag format |
+|----------------|--------------------|
+| Moodle 5.0.x   | `v5.0.x-php84`     |
+| Moodle 5.1.x   | `v5.1.x-php84`     |
+| Moodle 5.2.x   | `v5.2.x-php84`     |
+| Moodle 5.3 LTS and later | `v5.3.x-php84` and later |
+
+```bash
+docker pull erseco/alpine-moodle:v5.2.1-php84
+docker pull ghcr.io/erseco/alpine-moodle:v5.2.1-php84
+```
+
+> **Moodle 4.x is not available on PHP 8.4.** Moodle 4.5 LTS does not support PHP 8.4, so no `-php84` images are published for the 4.x line — keep using the default PHP 8.3 tags there.
+
+These `-php84` tags are built from the [`php84` branch](https://github.com/erseco/alpine-moodle/tree/php84) and **never overwrite** the existing `latest`, `main`, or `vX.Y.Z` tags, which stay on PHP 8.3 for now.
+
+The default official tags — including `latest` — will move to PHP 8.4 once **Moodle 5.3 LTS** (planned for **5 October 2026**) is released and becomes the new LTS baseline.
 
 ## Registries
 
