@@ -51,6 +51,7 @@ nav:
   - Persistence & Volumes: persistence.md
   - Configuration: configuration.md
   - SQLite Mode: sqlite.md
+  - PHP 8.4 (opt-in): php84.md
   - Upgrading: upgrading.md
   - Troubleshooting: troubleshooting.md
   - FAQ: faq.md

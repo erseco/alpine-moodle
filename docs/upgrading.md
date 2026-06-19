@@ -2,6 +2,11 @@
 
 How to move between Moodle versions safely.
 
+!!! tip "Moving to Moodle 5.x? PHP 8.4 is available"
+    Once you are on Moodle 5.x you can optionally switch to the PHP 8.4 image line by
+    pulling the `-php84` tag (e.g. `v5.2.1-php84`). The default tags stay on PHP 8.3.
+    See [PHP 8.4 (opt-in)](php84.md). Do **not** use `-php84` tags on Moodle 4.x.
+
 ## The basics
 
 The image applies Moodle database upgrades automatically on startup unless you opt out:

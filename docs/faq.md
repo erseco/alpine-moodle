@@ -56,9 +56,13 @@ Yes — set `AUTO_UPDATE_MOODLE=false`. The container will start without running
 
 `amd64`, `arm64`, `arm/v7`, `arm/v6`, `386`, `ppc64le`, `s390x`. Pull `erseco/alpine-moodle` on any of them and Docker will fetch the right variant.
 
+## Can I run Moodle on PHP 8.4?
+
+Yes, for **Moodle 5.x and later**, via the opt-in `-php84` tags (e.g. `erseco/alpine-moodle:v5.2.1-php84`). The default tags stay on **PHP 8.3** so Moodle 4.5 LTS keeps working — there are no `-php84` images for the 4.x line. See [PHP 8.4 (opt-in)](php84.md) for the full tag list and details.
+
 ## Does the image include Redis / PostgreSQL / MariaDB?
 
-No. The image only contains Moodle, PHP 8.3, Nginx, Moosh and supporting tools. External services (database, Redis) must run in their own containers. See [Docker Compose](docker-compose.md) for ready-made stacks.
+No. The image only contains Moodle, PHP (8.3 by default, or 8.4 on the opt-in [`-php84` tags](php84.md)), Nginx, Moosh and supporting tools. External services (database, Redis) must run in their own containers. See [Docker Compose](docker-compose.md) for ready-made stacks.
 
 ## Can I mount my own `config.php`?
 
