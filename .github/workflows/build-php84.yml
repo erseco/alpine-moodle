@@ -1,0 +1,203 @@
+name: build-php84
+
+# Builds and publishes the opt-in PHP 8.4 image line (-php84 tags).
+#
+# Safety rules enforced below:
+#   * Every published tag carries the -php84 suffix.
+#   * Released images are only allowed for Moodle 5.x and later (never 4.x).
+#   * latest, main and bare vX.Y.Z tags are NEVER published or overwritten.
+#   * Same registries / secrets / platforms as the default build.yml workflow.
+#
+# Trigger -> what gets built:
+#   push to `php84` branch         -> Moodle main  -> erseco/alpine-moodle:main-php84   (rolling dev image)
+#   push tag `v5.X.Y-php84`        -> Moodle v5.X.Y -> erseco/alpine-moodle:v5.X.Y-php84
+#   workflow_dispatch (inputs)     -> chosen Moodle -> chosen -php84 tag (optional push)
+
+on:
+  push:
+    branches:
+      - php84
+    tags:
+      - 'v5.*-php84'
+  workflow_dispatch:
+    inputs:
+      moodle_version:
+        description: 'Moodle release tag to build, for example v5.2.1'
+        required: true
+        default: 'v5.2.1'
+      image_tag:
+        description: 'Docker image tag to publish, for example v5.2.1-php84'
+        required: true
+        default: 'v5.2.1-php84'
+      push:
+        description: 'Push image to registries'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+
+jobs:
+  build-php84:
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Checkout the code
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      # Step 2: Resolve and validate the Moodle version + image tag
+      - name: Resolve build parameters
+        id: params
+        run: |
+          set -eu
+          EVENT="${{ github.event_name }}"
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            MOODLE_VERSION="${{ github.event.inputs.moodle_version }}"
+            IMAGE_TAG="${{ github.event.inputs.image_tag }}"
+            PUSH="${{ github.event.inputs.push }}"
+          elif [ "${{ github.ref_type }}" = "tag" ]; then
+            IMAGE_TAG="${{ github.ref_name }}"
+            MOODLE_VERSION="${IMAGE_TAG%-php84}"
+            PUSH="true"
+          else
+            # Direct push to the php84 branch: rolling Moodle main image on PHP 8.4.
+            MOODLE_VERSION="main"
+            IMAGE_TAG="main-php84"
+            PUSH="true"
+          fi
+
+          # Guard rail 1: every published tag MUST carry the -php84 suffix.
+          case "$IMAGE_TAG" in
+            *-php84) : ;;
+            *)
+              echo "ERROR: PHP 8.4 images must use a -php84 suffixed tag (got '$IMAGE_TAG')."
+              exit 1
+              ;;
+          esac
+
+          # Guard rail 2: released images are only for Moodle 5.x and later.
+          # 'main' (rolling dev image) is the only non-v5 value we accept, and it
+          # is only reachable from a direct push to the php84 branch (no user input).
+          if [ "$MOODLE_VERSION" != "main" ]; then
+            case "$IMAGE_TAG" in
+              v5.*-php84) : ;;
+              *)
+                echo "ERROR: PHP 8.4 images must use v5.*-php84 tags only (got '$IMAGE_TAG')."
+                exit 1
+                ;;
+            esac
+            case "$MOODLE_VERSION" in
+              v5.*) : ;;
+              *)
+                echo "ERROR: PHP 8.4 images are only supported for Moodle 5.x and later (got '$MOODLE_VERSION')."
+                exit 1
+                ;;
+            esac
+          fi
+
+          echo "moodle_version=$MOODLE_VERSION" >> "$GITHUB_OUTPUT"
+          echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          echo "push=$PUSH" >> "$GITHUB_OUTPUT"
+          echo "Building MOODLE_VERSION=$MOODLE_VERSION -> tags :$IMAGE_TAG (push=$PUSH)"
+
+      # Step 3: Compose the exact -php84 tags for both registries (no metadata-action,
+      # so there is no chance of accidentally emitting latest/main/bare version tags).
+      - name: Compose published tags
+        id: tags
+        run: |
+          set -eu
+          IMAGE_TAG="${{ steps.params.outputs.image_tag }}"
+          {
+            echo "list<<EOF"
+            echo "${{ github.repository }}:${IMAGE_TAG}"
+            echo "ghcr.io/${{ github.repository }}:${IMAGE_TAG}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      # Step 4: Set up QEMU for multi-platform builds
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: all
+
+      # Step 5: Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+        with:
+          driver-opts: |
+            network=host
+
+      # Step 6: Login to DockerHub and GHCR (only when we are going to push)
+      - name: Login to DockerHub
+        if: steps.params.outputs.push == 'true'
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Login to GHCR
+        if: steps.params.outputs.push == 'true'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Step 7: Lint Dockerfile
+      - name: Hadolint Action
+        uses: hadolint/hadolint-action@v3.3.0
+        with:
+          format: sarif
+          output-file: hadolint-results.sarif
+          no-fail: true
+
+      - name: Upload SARIF results
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: hadolint-results.sarif
+          category: hadolint-dockerfile-php84
+
+      # Step 8: Smoke test the PHP 8.4 image across the three database backends.
+      # These compose files build the Dockerfile in this branch (PHP 8.4), so a
+      # green run also proves the php84-* packages resolve and Moodle boots.
+      - name: Test (PostgreSQL)
+        run: |
+          docker compose version
+          docker compose --file docker-compose.test.yml up --exit-code-from sut --timeout 10 --build
+
+      - name: Test (MariaDB)
+        run: |
+          docker compose --file docker-compose.test.mariadb.yml up --exit-code-from sut --timeout 10 --build
+
+      - name: Test (SQLite)
+        run: |
+          docker compose --file docker-compose.test.sqlite.yml up --exit-code-from sut --timeout 10 --build
+
+      # Step 9: Build and push the -php84 image (multi-arch, same platforms as build.yml)
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: ${{ steps.params.outputs.push == 'true' }}
+          tags: ${{ steps.tags.outputs.list }}
+          platforms: linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/386,linux/ppc64le,linux/s390x
+          build-args: |
+            MOODLE_VERSION=${{ steps.params.outputs.moodle_version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Step 10: Run Trivy vulnerability scanner against the pushed image
+      - name: Run Trivy vulnerability scanner
+        if: steps.params.outputs.push == 'true'
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ghcr.io/${{ github.repository }}:${{ steps.params.outputs.image_tag }}
+          format: 'table'
+          exit-code: '0'
+          severity: 'CRITICAL,HIGH'

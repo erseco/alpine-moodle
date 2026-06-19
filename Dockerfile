@@ -1,11 +1,18 @@
 ARG ARCH=
-FROM ${ARCH}erseco/alpine-php-webserver:3.20
+# PHP 8.4 variant: this branch builds the -php84 image line (Moodle 5.x and later).
+# Pin to the erseco/alpine-php-webserver tag whose Alpine base *defaults* to PHP 8.4,
+# so `composer` and the php84-* extensions resolve against the same PHP runtime.
+# 3.23 = FROM alpine:3.23 (ships php84 and an unversioned /usr/bin/php -> php84).
+# Do NOT use 3.24: alpine:3.24 defaults to php85, so its `composer` runs on php85 and
+# fails against the php84-* extensions installed below.
+ARG PHP_WEBSERVER_VERSION=3.23
+FROM ${ARCH}erseco/alpine-php-webserver:${PHP_WEBSERVER_VERSION}
 
 LABEL maintainer="Ernesto Serrano <info@ernesto.es>"
 
 USER root
-RUN apk add --no-cache composer patch php83-posix php83-xmlwriter php83-pecl-redis \
-    php83-ldap php83-pecl-igbinary php83-exif php83-sqlite3 php83-pdo_sqlite \
+RUN apk add --no-cache composer patch php84-posix php84-xmlwriter php84-pecl-redis \
+    php84-ldap php84-pecl-igbinary php84-exif php84-sqlite3 php84-pdo_sqlite \
     # Remove alpine cache
     && rm -rf /var/cache/apk/*
 

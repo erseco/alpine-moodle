@@ -4,6 +4,10 @@ on:
   push:
     tags:
       - 'v*'
+      # PHP 8.4 opt-in tags (vX.Y.Z-php84) are built by build-php84.yml, never here.
+      # This matters most on this branch: -php84 tags point at php84 commits, so
+      # it is *this* build.yml that a -php84 tag push would otherwise trigger.
+      - '!v*-php84'
     branches:
       - main
   pull_request:
