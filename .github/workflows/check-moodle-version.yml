@@ -34,35 +34,53 @@ jobs:
           EXISTING_TAGS_FORMATTED=$(echo "$EXISTING_TAGS" | tr '\n' ' ')
           echo "existing_tags=$EXISTING_TAGS_FORMATTED" >> $GITHUB_ENV
 
+      - name: Resolve php84 branch commit
+        id: get-php84-sha
+        run: |
+          # -php84 image tags must point at the php84 branch commit, where the
+          # PHP 8.4 Dockerfile and build-php84.yml live. Resolve its tip if the
+          # branch exists; otherwise -php84 tagging is skipped this run.
+          if git fetch origin php84 2>/dev/null; then
+            PHP84_SHA=$(git rev-parse FETCH_HEAD)
+            echo "php84_sha=$PHP84_SHA" >> $GITHUB_ENV
+            echo "php84 branch tip: $PHP84_SHA"
+          else
+            echo "php84_sha=" >> $GITHUB_ENV
+            echo "php84 branch not found on origin; -php84 tagging disabled this run."
+          fi
+
       - name: Process missing tags
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
         run: |
           # Convert existing tags to a pattern for quick matching
           EXISTING_TAGS_PATTERN=" ${{ env.existing_tags }} "
-          # Counter for processed tags
+          PHP84_SHA="${{ env.php84_sha }}"
+          # Counters
           PROCESSED=0
-          
+          PHP84_CREATED=0
+
           # Process each Moodle tag
           for tag in ${{ env.moodle_tags }}; do
             # Only process version tags starting with 'v'
             if [[ ! "$tag" =~ ^v ]]; then
               continue
             fi
-            
-            # Check if tag exists
+
+            # Check if the default (PHP 8.3) tag exists; if so, this release was
+            # already synced, so skip it entirely (no -php84 backfill burst here —
+            # use scripts/build-php84-tags.sh to backfill existing 5.x releases).
             if [[ "$EXISTING_TAGS_PATTERN" == *" $tag "* ]]; then
               echo "Tag $tag already exists, skipping"
               continue
             fi
 
-            # Create and push tag (only need to do this once)            
+            # --- Default PHP 8.3 image tag ---
             echo "Creating new tag: $tag"
-            
             git tag "$tag"
             git push origin "$tag"
 
-            # Trigger build workflow
+            # Trigger the default build workflow
             echo "Triggering build for tag $tag"
             curl -X POST \
               -H "Accept: application/vnd.github.v3+json" \
@@ -74,13 +92,31 @@ jobs:
                   "moodle_version": "'"$tag"'"
                 }
               }'
-
-            # Count processed tag
             PROCESSED=$((PROCESSED+1))
+
+            # --- Opt-in PHP 8.4 image tag (new Moodle 5.x releases only) ---
+            # Create vX.Y.Z-php84 on the php84 branch commit and push it with the
+            # PAT so the tag push triggers build-php84.yml (build.yml ignores
+            # *-php84 tags). Requires GH_PAT to have push (contents:write) access.
+            if [[ -n "$PHP84_SHA" && "$tag" == v5.* ]]; then
+              php84_tag="${tag}-php84"
+              if [[ "$EXISTING_TAGS_PATTERN" == *" $php84_tag "* ]]; then
+                echo "Tag $php84_tag already exists, skipping"
+              else
+                echo "Creating PHP 8.4 tag: $php84_tag -> php84@${PHP84_SHA:0:7}"
+                git tag "$php84_tag" "$PHP84_SHA"
+                if git push "https://${GH_PAT}@github.com/${{ github.repository }}.git" "$php84_tag"; then
+                  PHP84_CREATED=$((PHP84_CREATED+1))
+                else
+                  echo "WARNING: failed to push $php84_tag (check GH_PAT push scope); continuing."
+                  git tag -d "$php84_tag" || true
+                fi
+              fi
+            fi
           done
-          
-          echo "Process completed. Created $PROCESSED new tags."
-          echo "The buildx workflow will be automatically triggered for these tags."
+
+          echo "Process completed. Created $PROCESSED new tags and $PHP84_CREATED new -php84 tags."
+          echo "build.yml and build-php84.yml will be triggered for the new tags."
 
       - name: Summary
         run: |

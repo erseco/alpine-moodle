@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - 'v*'
+      # PHP 8.4 opt-in tags (vX.Y.Z-php84) are built by build-php84.yml, never here.
+      - '!v*-php84'
     branches:
       - main
   pull_request:
