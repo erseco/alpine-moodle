@@ -6,6 +6,9 @@ LABEL maintainer="Ernesto Serrano <info@ernesto.es>"
 USER root
 RUN apk add --no-cache composer patch php83-posix php83-xmlwriter php83-pecl-redis \
     php83-ldap php83-pecl-igbinary php83-exif php83-sqlite3 php83-pdo_sqlite \
+    # php83-zip provides ZipArchive, used by the Moodle blueprint runner for
+    # safe bundle/plugin extraction.
+    php83-zip \
     # Remove alpine cache
     && rm -rf /var/cache/apk/*
 
