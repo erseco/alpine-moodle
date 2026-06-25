@@ -1,0 +1,172 @@
+#!/usr/bin/env php
+<?php
+/**
+ * moodle-blueprint — apply Moodle Playground-compatible blueprint.json files.
+ *
+ * Usage:
+ *   moodle-blueprint apply      Apply a blueprint (bootstraps Moodle).
+ *   moodle-blueprint validate   Parse and classify a blueprint without applying.
+ *   moodle-blueprint help       Show this help.
+ *
+ * Inputs are taken from environment variables (see below) and may be overridden
+ * with flags. Source precedence: bundle > file > url.
+ *
+ *   MOODLE_BLUEPRINT                      Path to a blueprint.json file
+ *   MOODLE_BLUEPRINT_URL                  Remote URL to a blueprint.json file
+ *   MOODLE_BLUEPRINT_BUNDLE               Path to a bundle directory or ZIP
+ *   MOODLE_BLUEPRINT_FORCE                Reapply even if already applied (false)
+ *   MOODLE_BLUEPRINT_ALLOW_REMOTE_RESOURCES   Allow url resources (true)
+ *   MOODLE_BLUEPRINT_ALLOW_UNSAFE_STEPS   Allow unsafe steps if implemented (false)
+ *   MOODLE_BLUEPRINT_MAX_RESOURCE_SIZE    Max remote resource size (50M)
+ *
+ * This is a CLI-only tool; it refuses to run when served over HTTP.
+ */
+
+use MoodleBlueprint\BlueprintException;
+use MoodleBlueprint\BlueprintRunner;
+use MoodleBlueprint\Logger;
+use MoodleBlueprint\SecurityPolicy;
+
+define('CLI_SCRIPT', true);
+
+// Extra execution prevention — never serve this over the web.
+if (isset($_SERVER['REMOTE_ADDR'])) {
+    exit(1);
+}
+
+$libDir = getenv('MOODLE_BLUEPRINT_LIB') ?: '/usr/local/lib/moodle-blueprint';
+require $libDir . '/autoload.php';
+
+$logger = new Logger();
+
+/**
+ * Read a boolean-ish environment variable.
+ */
+function blueprint_env_bool(string $name, bool $default): bool
+{
+    $value = getenv($name);
+    if ($value === false || $value === '') {
+        return $default;
+    }
+    $parsed = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+    return $parsed === null ? $default : $parsed;
+}
+
+/**
+ * Parse "--key=value" / "--flag" arguments into a map.
+ *
+ * @param array<int,string> $argv
+ * @return array<string,string|bool>
+ */
+function blueprint_parse_flags(array $argv): array
+{
+    $flags = [];
+    foreach ($argv as $arg) {
+        if (strncmp($arg, '--', 2) !== 0) {
+            continue;
+        }
+        $arg = substr($arg, 2);
+        if (strpos($arg, '=') !== false) {
+            [$k, $v] = explode('=', $arg, 2);
+            $flags[$k] = $v;
+        } else {
+            $flags[$arg] = true;
+        }
+    }
+    return $flags;
+}
+
+$command = $argv[1] ?? 'apply';
+$flags = blueprint_parse_flags(array_slice($argv, 2));
+
+if ($command === 'help' || $command === '--help' || $command === '-h') {
+    fwrite(STDOUT, "Usage: moodle-blueprint [apply|validate|help]\n");
+    fwrite(STDOUT, "See the header of this script and docs/blueprints.md for details.\n");
+    exit(0);
+}
+
+// Resolve the blueprint sources (flags override environment).
+$bundle = isset($flags['bundle']) && is_string($flags['bundle']) ? $flags['bundle'] : (getenv('MOODLE_BLUEPRINT_BUNDLE') ?: null);
+$file   = isset($flags['file']) && is_string($flags['file']) ? $flags['file'] : (getenv('MOODLE_BLUEPRINT') ?: null);
+$url    = isset($flags['url']) && is_string($flags['url']) ? $flags['url'] : (getenv('MOODLE_BLUEPRINT_URL') ?: null);
+
+if (($bundle === null || $bundle === '') && ($file === null || $file === '') && ($url === null || $url === '')) {
+    $logger->info('No blueprint variable set; nothing to apply.');
+    exit(0);
+}
+
+$force        = isset($flags['force']) ? true : blueprint_env_bool('MOODLE_BLUEPRINT_FORCE', false);
+$allowRemote  = isset($flags['no-remote']) ? false : blueprint_env_bool('MOODLE_BLUEPRINT_ALLOW_REMOTE_RESOURCES', true);
+$allowUnsafe  = isset($flags['allow-unsafe']) ? true : blueprint_env_bool('MOODLE_BLUEPRINT_ALLOW_UNSAFE_STEPS', false);
+$maxSizeStr   = isset($flags['max-size']) && is_string($flags['max-size']) ? $flags['max-size'] : (getenv('MOODLE_BLUEPRINT_MAX_RESOURCE_SIZE') ?: '50M');
+
+$moodleRoot = isset($flags['moodle-root']) && is_string($flags['moodle-root']) ? $flags['moodle-root'] : '/var/www/html';
+$dataRoot   = isset($flags['data-root']) && is_string($flags['data-root']) ? $flags['data-root'] : '/var/www/moodledata';
+
+// Create an isolated working directory and clean it up on exit.
+$workDir = isset($flags['work-dir']) && is_string($flags['work-dir'])
+    ? $flags['work-dir']
+    : sys_get_temp_dir() . '/moodle-blueprint.' . getmypid() . '.' . substr(sha1((string) mt_rand()), 0, 8);
+if (!is_dir($workDir) && !mkdir($workDir, 0700, true) && !is_dir($workDir)) {
+    $logger->error('Unable to create working directory: ' . $workDir);
+    exit(1);
+}
+register_shutdown_function(static function () use ($workDir) {
+    if (is_dir($workDir)) {
+        $it = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($workDir, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::CHILD_FIRST
+        );
+        foreach ($it as $item) {
+            $item->isDir() ? @rmdir($item->getPathname()) : @unlink($item->getPathname());
+        }
+        @rmdir($workDir);
+    }
+});
+
+try {
+    $maxSize = SecurityPolicy::parseSize($maxSizeStr);
+    $policy = new SecurityPolicy($allowRemote, $allowUnsafe, $maxSize, [$moodleRoot]);
+
+    if ($command === 'validate') {
+        $runner = new BlueprintRunner($logger, $policy, $moodleRoot, $dataRoot, $workDir, $force);
+        $summary = $runner->validate($bundle ?: null, $file ?: null, $url ?: null);
+        foreach ($summary as $kind => $count) {
+            $logger->info(sprintf('  %s: %d step(s)', $kind, $count));
+        }
+        exit(0);
+    }
+
+    if ($command !== 'apply') {
+        $logger->error('Unknown command: ' . $command);
+        exit(1);
+    }
+
+    // Apply requires a configured Moodle: bootstrap it so the create* steps can
+    // use the Moodle PHP API and so we read the real data/code roots.
+    $configfile = $moodleRoot . '/config.php';
+    if (!is_file($configfile)) {
+        $logger->error('Moodle is not configured yet (config.php missing); cannot apply blueprint.');
+        exit(1);
+    }
+    require($configfile);
+    if (isset($CFG->libdir) && is_file($CFG->libdir . '/clilib.php')) {
+        require_once($CFG->libdir . '/clilib.php');
+    }
+    if (isset($CFG->dirroot)) {
+        $moodleRoot = $CFG->dirroot;
+    }
+    if (isset($CFG->dataroot)) {
+        $dataRoot = $CFG->dataroot;
+    }
+
+    $runner = new BlueprintRunner($logger, $policy, $moodleRoot, $dataRoot, $workDir, $force);
+    $runner->apply($bundle ?: null, $file ?: null, $url ?: null);
+    exit(0);
+} catch (BlueprintException $e) {
+    $logger->error($e->describe());
+    exit(1);
+} catch (\Throwable $e) {
+    $logger->error($e->getMessage());
+    exit(1);
+}
