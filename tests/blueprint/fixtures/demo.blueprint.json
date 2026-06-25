@@ -1,0 +1,43 @@
+{
+  "$schema": "https://raw.githubusercontent.com/ateeducacion/moodle-playground/main/assets/blueprints/blueprint-schema.json",
+  "preferredVersions": {
+    "php": "8.3",
+    "moodle": "5.0"
+  },
+  "landingPage": "/course/index.php",
+  "constants": {
+    "DEMO_CATEGORY": "Blueprint demo"
+  },
+  "steps": [
+    {
+      "step": "setConfig",
+      "name": "debug",
+      "value": 32767
+    },
+    {
+      "step": "createCategory",
+      "name": "{{DEMO_CATEGORY}}",
+      "idnumber": "blueprint-demo"
+    },
+    {
+      "step": "createCourse",
+      "fullname": "Blueprint demo course",
+      "shortname": "BLUEPRINT101",
+      "category": "blueprint-demo"
+    },
+    {
+      "step": "createUser",
+      "username": "student1",
+      "password": "ChangeMe123!",
+      "email": "student1@example.com",
+      "firstname": "Student",
+      "lastname": "One"
+    },
+    {
+      "step": "enrolUser",
+      "username": "student1",
+      "course": "BLUEPRINT101",
+      "role": "student"
+    }
+  ]
+}

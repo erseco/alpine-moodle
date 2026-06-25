@@ -138,6 +138,104 @@ Define the ENV variables in `docker-compose.yml`. The full reference with notes,
 | `POST_CONFIGURE_COMMANDS`   |                      | Shell commands run after Moodle configuration (great for Moosh). |
 | `RUN_CRON_TASKS`            | `true`               | Set to `false` to disable the internal `runit`-managed cron loop. |
 
+## Moodle Playground Blueprints
+
+> ⚠️ **Experimental.** `alpine-moodle` can apply [Moodle Playground](https://github.com/ateeducacion/moodle-playground)-compatible `blueprint.json` files **after Moodle has been installed or upgraded**. This is an additional declarative provisioning layer for repeatable development, QA, CI and demo scenarios — it does not replace the environment-variable configuration. Only a documented subset of steps is implemented; unsupported steps fail clearly and unsafe steps are disabled by default.
+
+The same `blueprint.json` can describe one Moodle scenario for two complementary **sibling** runtimes:
+
+- **[`moodle-playground`](https://github.com/ateeducacion/moodle-playground)** — the browser/WASM runtime for ephemeral QA, demos, shareable reproductions and fast validation. No server required.
+- **`alpine-moodle`** — this Docker runtime for local development, CI, plugin development, integration testing, persistence and real server-side behaviour (cron, mail, database, file system).
+
+Author a blueprint once; run it in the browser for a quick look and in Docker when you need a real, persistent Moodle.
+
+A new startup hook (`rootfs/docker-entrypoint-init.d/03-apply-blueprint.sh`) runs after `02-configure-moodle.sh` and calls `/usr/local/bin/moodle-blueprint apply` when a blueprint variable is set.
+
+| Variable                                  | Description                                        | Default |
+| ----------------------------------------- | -------------------------------------------------- | ------- |
+| `MOODLE_BLUEPRINT`                        | Path to a blueprint JSON file inside the container | empty   |
+| `MOODLE_BLUEPRINT_URL`                    | Remote URL to a blueprint JSON file                | empty   |
+| `MOODLE_BLUEPRINT_BUNDLE`                 | Path to a local bundle directory or ZIP            | empty   |
+| `MOODLE_BLUEPRINT_FORCE`                  | Reapply even if already applied                    | `false` |
+| `MOODLE_BLUEPRINT_ON_ERROR`               | `abort` or `warn`                                  | `abort` |
+| `MOODLE_BLUEPRINT_ALLOW_REMOTE_RESOURCES` | Allow URL resources                                | `true`  |
+| `MOODLE_BLUEPRINT_ALLOW_UNSAFE_STEPS`     | Allow unsafe steps if implemented                  | `false` |
+| `MOODLE_BLUEPRINT_MAX_RESOURCE_SIZE`      | Max remote resource size                           | `50M`   |
+
+If several sources are set, precedence is `MOODLE_BLUEPRINT_BUNDLE` > `MOODLE_BLUEPRINT` > `MOODLE_BLUEPRINT_URL`.
+
+Compatibility matrix:
+
+| Step                  | Status      | Notes                            |
+| --------------------- | ----------- | -------------------------------- |
+| `setConfig`           | supported   | Uses Moodle CLI                  |
+| `setConfigs`          | supported   | Loops over `setConfig`           |
+| `setAdminAccount`     | supported   | Password not logged              |
+| `installMoodlePlugin` | supported   | ZIP resources, safe extraction   |
+| `installTheme`        | supported   | ZIP resources                    |
+| `setTheme`            | supported   | Sets Moodle theme config         |
+| `createCategory`      | supported   | Idempotent                       |
+| `createCourse`        | supported   | Idempotent by shortname          |
+| `createUser`          | supported   | Idempotent by username           |
+| `createUsers`         | supported   | Loops over `createUser`          |
+| `enrolUser`           | supported   | Manual enrolment                 |
+| `installMoodle`       | no-op       | Handled by container startup     |
+| `login`               | no-op       | Browser-only, not applicable     |
+| `restoreCourse`       | planned     | Fails clearly until implemented  |
+| `runPhpCode`          | disabled    | Unsafe                           |
+| `runPhpScript`        | disabled    | Unsafe                           |
+| `writeFile`           | disabled    | Unsafe by default                |
+| `unzip`               | disabled    | Unsafe by default                |
+
+Minimal example:
+
+```yaml
+services:
+  moodle:
+    image: erseco/alpine-moodle:latest
+    ports:
+      - "8080:8080"
+    environment:
+      MOODLE_DATABASE_TYPE: sqlite3
+      MOODLE_USERNAME: admin
+      MOODLE_PASSWORD: ChangeMe123!
+      MOODLE_EMAIL: admin@example.com
+      MOODLE_SITENAME: "Blueprint Demo"
+      MOODLE_BLUEPRINT: /blueprints/demo.blueprint.json
+    volumes:
+      - moodledata:/var/www/moodledata
+      - ./demo.blueprint.json:/blueprints/demo.blueprint.json:ro
+
+volumes:
+  moodledata:
+```
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/ateeducacion/moodle-playground/main/assets/blueprints/blueprint-schema.json",
+  "preferredVersions": { "php": "8.3", "moodle": "5.0" },
+  "landingPage": "/course/index.php",
+  "steps": [
+    { "step": "setConfig", "name": "debug", "value": 32767 },
+    { "step": "createCategory", "name": "Blueprint demo", "idnumber": "blueprint-demo" },
+    { "step": "createCourse", "fullname": "Blueprint demo course", "shortname": "BLUEPRINT101", "category": "blueprint-demo" },
+    { "step": "createUser", "username": "student1", "password": "ChangeMe123!", "email": "student1@example.com", "firstname": "Student", "lastname": "One" },
+    { "step": "enrolUser", "username": "student1", "course": "BLUEPRINT101", "role": "student" }
+  ]
+}
+```
+
+Bundles co-locate a `blueprint.json` with its resources (directory or ZIP, `blueprint.json` at the root or one directory deep, `__MACOSX` ignored):
+
+```text
+my-moodle-blueprint/
+├── blueprint.json
+└── plugins/
+    └── mod_example.zip
+```
+
+See the full guide, resource descriptors, security model and idempotency notes in **[docs/blueprints.md](docs/blueprints.md)** (published at <https://erseco.github.io/alpine-moodle/blueprints/>). A copy-pasteable example lives in [`docs/examples/demo.blueprint.json`](docs/examples/demo.blueprint.json).
+
 ## Key features
 
 - Compact image (~100 MB) built on [`erseco/alpine-php-webserver`](https://github.com/erseco/alpine-php-webserver)
