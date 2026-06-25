@@ -107,7 +107,12 @@ class RunContext
             throw new BlueprintException(sprintf('Moodle CLI script not found: %s', $path));
         }
 
-        $cmd = escapeshellarg(PHP_BINARY) . ' -d max_input_vars=10000 ' . escapeshellarg($path);
+        // Prefer the image's /usr/local/bin/php wrapper, which applies the
+        // operator-configurable ini tuning (memory_limit, post_max_size, …).
+        // Plugin upgrades run via this path can be memory-hungry, so honouring
+        // those settings matters. Fall back to PHP_BINARY off-container.
+        $php = is_executable('/usr/local/bin/php') ? '/usr/local/bin/php' : (PHP_BINARY ?: 'php');
+        $cmd = escapeshellarg($php) . ' -d max_input_vars=10000 ' . escapeshellarg($path);
         foreach ($args as $arg) {
             $cmd .= ' ' . escapeshellarg($arg);
         }

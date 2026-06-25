@@ -12,6 +12,9 @@ namespace MoodleBlueprint;
  */
 class Archive
 {
+    /** Maximum number of entries an archive may contain (inode-exhaustion guard). */
+    private const MAX_ENTRIES = 20000;
+
     /**
      * Return true if $path is a readable ZIP archive.
      */
@@ -50,6 +53,18 @@ class Archive
             throw new BlueprintException(sprintf('Unable to create extraction directory "%s".', $destDir));
         }
 
+        // Guard against zip bombs and inode exhaustion. The cumulative byte
+        // counter during extraction is authoritative; the up-front declared-size
+        // check below rejects obvious bombs before any bytes are written.
+        $maxBytes = $policy->maxArchiveSize();
+        if ($zip->numFiles > self::MAX_ENTRIES) {
+            $zip->close();
+            throw new BlueprintException(sprintf('Archive has too many entries (%d > %d).', $zip->numFiles, self::MAX_ENTRIES));
+        }
+
+        $declaredTotal = 0;
+        $writtenTotal = 0;
+
         try {
             for ($i = 0; $i < $zip->numFiles; $i++) {
                 $name = $zip->getNameIndex($i);
@@ -74,6 +89,18 @@ class Archive
                     continue;
                 }
 
+                // Reject obvious bombs using the declared uncompressed size.
+                $stat = $zip->statIndex($i);
+                if (is_array($stat) && isset($stat['size'])) {
+                    $declaredTotal += (int) $stat['size'];
+                    if ($declaredTotal > $maxBytes) {
+                        throw new BlueprintException(sprintf(
+                            'Archive decompresses to more than the %d byte limit (possible zip bomb).',
+                            $maxBytes
+                        ));
+                    }
+                }
+
                 $parent = dirname($target);
                 if (!is_dir($parent) && !mkdir($parent, 0775, true) && !is_dir($parent)) {
                     throw new BlueprintException(sprintf('Unable to create directory "%s".', $parent));
@@ -88,7 +115,30 @@ class Archive
                     fclose($in);
                     throw new BlueprintException(sprintf('Unable to write extracted file "%s".', $clean));
                 }
-                stream_copy_to_stream($in, $out);
+
+                // Copy in bounded chunks, enforcing the cumulative cap so a lying
+                // header cannot bypass the declared-size check above.
+                while (!feof($in)) {
+                    $chunk = fread($in, 65536);
+                    if ($chunk === false) {
+                        break;
+                    }
+                    $writtenTotal += strlen($chunk);
+                    if ($writtenTotal > $maxBytes) {
+                        fclose($in);
+                        fclose($out);
+                        @unlink($target);
+                        throw new BlueprintException(sprintf(
+                            'Archive decompresses to more than the %d byte limit (possible zip bomb).',
+                            $maxBytes
+                        ));
+                    }
+                    if (fwrite($out, $chunk) === false) {
+                        fclose($in);
+                        fclose($out);
+                        throw new BlueprintException(sprintf('Unable to write extracted file "%s".', $clean));
+                    }
+                }
                 fclose($in);
                 fclose($out);
             }

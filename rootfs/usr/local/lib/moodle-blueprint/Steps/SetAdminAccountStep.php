@@ -12,10 +12,10 @@ use MoodleBlueprint\RunContext;
  *   { "step": "setAdminAccount", "username": "admin", "password": "...",
  *     "email": "admin@example.com", "firstname": "Admin", "lastname": "User" }
  *
- * When username, password and email are all provided, the existing
- * admin/cli/update_admin_user.php helper is reused. Partial updates (and the
- * optional firstname/lastname fields) go through the Moodle API. The password
- * is never written to the logs.
+ * Updates go through the Moodle API (the runner is bootstrapped), which keeps
+ * the password out of the process argument vector — unlike shelling out to
+ * admin/cli/update_admin_user.php with --password=. The password is never
+ * written to the logs.
  */
 class SetAdminAccountStep extends AbstractStep
 {
@@ -29,20 +29,6 @@ class SetAdminAccountStep extends AbstractStep
 
         if ($username === '' && $password === '' && $email === '' && $firstname === '' && $lastname === '') {
             throw new BlueprintException('setAdminAccount requires at least one field to update.');
-        }
-
-        $fullTriple = $username !== '' && $password !== '' && $email !== '';
-        $needsApi = $firstname !== '' || $lastname !== '' || !$fullTriple;
-
-        if (!$needsApi) {
-            // Preferred path: reuse the proven CLI helper for the common case.
-            $context->runMoodleCli('update_admin_user.php', [
-                '--username=' . $username,
-                '--password=' . $password,
-                '--email=' . $email,
-            ]);
-            $context->logger()->info('Admin account updated (username/email/password).');
-            return;
         }
 
         $this->updateViaApi($context, $username, $password, $email, $firstname, $lastname);

@@ -171,6 +171,11 @@ class ResourceResolver
     private function resolveBase64(array $descriptor): ResolvedResource
     {
         $encoded = (string) ($descriptor['base64'] ?? '');
+        // Reject using the (cheap) encoded length before allocating the decode:
+        // base64 decodes to ~3/4 of its encoded length.
+        if (intdiv(strlen($encoded), 4) * 3 > $this->policy->maxResourceSize()) {
+            $this->policy->assertWithinSizeLimit(intdiv(strlen($encoded), 4) * 3, 'base64 resource');
+        }
         $decoded = base64_decode($encoded, true);
         if ($decoded === false) {
             throw new BlueprintException('Invalid base64 resource content.');
@@ -194,6 +199,11 @@ class ResourceResolver
         }
         $meta = substr($value, 5, $comma - 5);
         $payload = substr($value, $comma + 1);
+
+        // Pre-check on the encoded payload length before decoding. Both base64
+        // (~3/4) and percent-decoding only shrink or keep the payload size, so
+        // the encoded length is a safe upper bound.
+        $this->policy->assertWithinSizeLimit(strlen($payload), 'data URL resource');
 
         if (stripos($meta, ';base64') !== false) {
             $decoded = base64_decode($payload, true);

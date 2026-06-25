@@ -59,6 +59,19 @@ class SecurityPolicy
     }
 
     /**
+     * Hard cap on the total number of DECOMPRESSED bytes written while
+     * extracting an archive.
+     *
+     * Archives legitimately expand to several times their packed size, so this
+     * is generously larger than the per-resource limit, while still stopping
+     * zip bombs that inflate to many gigabytes.
+     */
+    public function maxArchiveSize(): int
+    {
+        return $this->maxResourceSize * 20;
+    }
+
+    /**
      * Parse a human size string such as "50M", "10k", "1G" or a plain byte
      * count into an integer number of bytes.
      */

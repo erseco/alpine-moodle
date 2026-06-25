@@ -27,7 +27,12 @@ class EnrolUserStep extends AbstractStep
         $courseShortname = $this->requireString($config, 'course');
         $roleShortname = $this->optString($config, 'role', 'student');
 
-        $user = $DB->get_record('user', ['username' => \core_text::strtolower($username)]);
+        // Match CreateUserStep's normalisation (trim + lowercase) and scope by
+        // mnethostid so we resolve the same account createUser provisioned.
+        $user = $DB->get_record('user', [
+            'username' => \core_text::strtolower(trim($username)),
+            'mnethostid' => $CFG->mnet_localhost_id,
+        ]);
         if (!$user) {
             throw new BlueprintException(sprintf('Cannot enrol: user "%s" not found.', $username));
         }

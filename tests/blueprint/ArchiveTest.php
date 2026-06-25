@@ -48,6 +48,22 @@ it('rejects a ZIP-slip archive', function () use ($tmp, $policy) {
     assert_true(!is_file(dirname($tmp) . '/escape.txt'), 'no file written above tmp');
 });
 
+it('rejects an archive that decompresses past the size cap (zip bomb)', function () use ($tmp) {
+    // Tiny resource cap => maxArchiveSize() = 20 * cap = 20000 bytes.
+    $smallPolicy = new SecurityPolicy(true, false, 1000);
+    $zipPath = $tmp . '/bomb.zip';
+    $zip = new ZipArchive();
+    $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+    // 50 KB of highly compressible data; inflated size exceeds the 20 KB cap.
+    $zip->addFromString('big.txt', str_repeat('A', 50000));
+    $zip->close();
+
+    $dest = $tmp . '/bomb-out';
+    assert_throws(BlueprintException::class, function () use ($smallPolicy, $zipPath, $dest) {
+        Archive::extract($smallPolicy, $zipPath, $dest);
+    }, 'zip bomb');
+});
+
 it('ignores __MACOSX metadata entries', function () use ($tmp, $policy) {
     $zipPath = $tmp . '/mac.zip';
     $zip = new ZipArchive();
