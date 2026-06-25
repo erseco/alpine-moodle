@@ -1,0 +1,40 @@
+name: blueprint-tests
+
+# Lint the Moodle blueprint runner, syntax-check its entrypoint hook and run the
+# dependency-free PHP unit tests. Kept separate from the heavy image build so it
+# stays fast on every pull request.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'rootfs/usr/local/bin/moodle-blueprint'
+      - 'rootfs/usr/local/lib/moodle-blueprint/**'
+      - 'rootfs/docker-entrypoint-init.d/03-apply-blueprint.sh'
+      - 'tests/blueprint/**'
+      - '.github/workflows/blueprint-tests.yml'
+  pull_request:
+    paths:
+      - 'rootfs/usr/local/bin/moodle-blueprint'
+      - 'rootfs/usr/local/lib/moodle-blueprint/**'
+      - 'rootfs/docker-entrypoint-init.d/03-apply-blueprint.sh'
+      - 'tests/blueprint/**'
+      - '.github/workflows/blueprint-tests.yml'
+  workflow_dispatch:
+
+jobs:
+  blueprint-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: zip
+          coverage: none
+
+      - name: Run blueprint checks
+        run: ./tests/blueprint/run.sh
