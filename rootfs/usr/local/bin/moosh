@@ -25,7 +25,27 @@ foreach ($argv as $arg) {
     }
 }
 
-// Insert -p /var/www/html before the first non-option argument (the subcommand)
+// Resolve the Moodle code root (dirroot) that moosh should target.
+//
+// Since Moodle 5.1, the web-accessible files (and version.php / lib/) live
+// inside a "public/" subdirectory, so the codebase root moved from
+// /var/www/html to /var/www/html/public. moosh detects a Moodle install by
+// its version.php, so on 5.1+ it must be pointed at the public/ directory
+// (whose config.php in turn requires the parent /var/www/html/config.php).
+//
+// On the legacy (pre-5.1) layout we also force session_handler_class=unset,
+// which avoids CLI session-handler errors. On 5.1+ that same override makes
+// moosh bootstrap silently produce no output, so it is omitted there.
+// Auto-detect the layout so both work.
+$moodlePath = '/var/www/html';
+$extraOptions = ['-o', 'session_handler_class=unset'];
+if (is_file('/var/www/html/public/version.php')) {
+    $moodlePath = '/var/www/html/public';
+    $extraOptions = [];
+}
+
+// Insert -p <moodlePath> (+ any extra options) before the first non-option
+// argument (the subcommand).
 if (!$hasMoodlePath) {
     $insertAt = 0;
     foreach ($argv as $i => $arg) {
@@ -34,7 +54,7 @@ if (!$hasMoodlePath) {
             break;
         }
     }
-    array_splice($argv, $insertAt, 0, ['-p', '/var/www/html', '-o', 'session_handler_class=unset']);
+    array_splice($argv, $insertAt, 0, array_merge(['-p', $moodlePath], $extraOptions));
 }
 
 array_unshift($argv, $script);
