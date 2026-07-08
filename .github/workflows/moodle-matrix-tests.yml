@@ -58,15 +58,10 @@ jobs:
           MOODLE_VERSION: ${{ matrix.moodle }}
         run: ./tests/compose-test.sh docker-compose.test.mariadb.yml
 
-  # SQLite covers the versions where the experimental SQLite patch actually
-  # yields a working install: v5.2.x and main (both use ateeducacion/moodle
-  # PR #1). Other versions are intentionally NOT covered:
-  #   - 4.5 has no SQLite patch at all.
-  #   - 5.0 (PR #3) and 5.1 (PR #2) install-fail with "Error reading environment
-  #     data" (PostgreSQL on those versions passes, so it is the patch, not the
-  #     layout or this change).
-  # See specs/ci-moodle-version-matrix.md. Fixing those SQLite patches is out of
-  # scope for this CI change.
+  # SQLite now works on every supported version, so it is covered across the
+  # whole matrix (legacy 4.5/5.0 + public 5.1/5.2/main). This exercises each
+  # ateeducacion/moodle SQLite patch: PR #1 (5.2/main), PR #2 (5.1), PR #3 (5.0)
+  # and PR #4 (4.5). See specs/ci-moodle-sqlite-4.5-5.x.md.
   sqlite:
     name: "Moodle ${{ matrix.moodle }} · SQLite"
     runs-on: ubuntu-latest
@@ -74,7 +69,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        moodle: [v5.2.1, main]
+        moodle: [v4.5.12, v5.0.8, v5.1.5, v5.2.1, main]
     steps:
       - name: Checkout
         uses: actions/checkout@v7
