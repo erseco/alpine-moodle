@@ -48,8 +48,16 @@ an HTTP homepage. This has two gaps:
   so version values must be **real git tags**; there is no bare `v4.5` tag.
   Patch tags are pinned to the latest available at implementation time and
   refreshed as needed. This is documented, not hidden.
-- SQLite mode depends on out-of-tree patches that only exist for Moodle **5.0+**
-  (see Dockerfile), so SQLite cannot cover 4.5.
+- SQLite mode depends on out-of-tree patches (`ateeducacion/moodle`: PR #1 for
+  main/v5.2.x, PR #2 for v5.1.x, PR #3 for v5.0.x; see Dockerfile). Only **PR #1
+  (main + v5.2.x) yields a working install**. The CI matrix surfaced that
+  SQLite on **v5.0.8 (PR #3)** and **v5.1.5 (PR #2)** fails in
+  `install_database.php` with *"Error reading environment data"* (reproduced
+  locally on arm64 and in CI on amd64), while PostgreSQL on those same versions
+  passes — so it is the patch, not the layout or this change. 4.5 has no SQLite
+  patch at all. **SQLite therefore only covers v5.2.x + main.** These exclusions
+  are documented here and in the workflow, not silently dropped; fixing the 5.0
+  and 5.1 SQLite patches is out of scope.
 - `moosh` lives only inside the `app` container (it needs the Moodle codebase and
   DB access), so the Moodle-context `moosh` check must run **inside `app`**, not
   in the black-box `sut` probe container.
@@ -64,16 +72,19 @@ an HTTP homepage. This has two gaps:
 | Moodle    | Layout        | PostgreSQL | MariaDB | SQLite |
 |-----------|---------------|:----------:|:-------:|:------:|
 | v4.5.12   | legacy        | ✅         | ✅      | —¹     |
-| v5.0.8    | legacy        | ✅         | —       | ✅     |
-| v5.1.5    | public/       | ✅         | —       | —      |
-| v5.2.1    | public/       | ✅         | ✅      | —      |
+| v5.0.8    | legacy        | ✅         | —       | —²     |
+| v5.1.5    | public/       | ✅         | —       | —²     |
+| v5.2.1    | public/       | ✅         | ✅      | ✅     |
 | main (5.3-dev) | public/  | ✅         | —       | ✅     |
 
-¹ SQLite patches exist only for Moodle 5.0+; 4.5 has no SQLite support.
+¹ 4.5 has no SQLite patch at all.
+² The 5.0 (PR #3) and 5.1 (PR #2) SQLite patches do not yield a working install
+  (see Constraints); excluded.
 
 - PostgreSQL: all five versions (legacy + public/ coverage).
 - MariaDB: v4.5.12 (legacy) + v5.2.1 (public/) — one of each layout.
-- SQLite: v5.0.8 (legacy, has patch) + main (public/) — one of each layout.
+- SQLite: v5.2.1 + main — the versions whose SQLite patch (PR #1) actually
+  installs. Other versions' SQLite is not viable (see Constraints).
 
 Latest tags at implementation time: v4.5.12, v5.0.8, v5.1.5, v5.2.1.
 
