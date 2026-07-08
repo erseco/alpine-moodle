@@ -79,27 +79,15 @@ RUN if [ "$MOODLE_VERSION" = "main" ]; then \
     echo "Downloading Moodle from: $MOODLE_URL" && \
     curl -L "$MOODLE_URL" | tar xz --strip-components=1 -C /var/www/html/
 
-# Apply experimental SQLite patches (MDL-88218) from ateeducacion/moodle.
-# Each Moodle release branch has a matching patch PR:
-#   main / v5.2+  → PR #1 (targets main)
-#   v5.1.x        → PR #2 (targets MOODLE_501_STABLE)
-#   v5.0.x        → PR #3 (targets MOODLE_500_STABLE)
-# Older versions do not have SQLite patches; sqlite3 mode will be unavailable.
-RUN SQLITE_PATCH_URL="" && \
-    case "$MOODLE_VERSION" in \
-      main|v5.2*) SQLITE_PATCH_URL="https://github.com/ateeducacion/moodle/pull/1.diff" ;; \
-      v5.1*)      SQLITE_PATCH_URL="https://github.com/ateeducacion/moodle/pull/2.diff" ;; \
-      v5.0*)      SQLITE_PATCH_URL="https://github.com/ateeducacion/moodle/pull/3.diff" ;; \
-    esac && \
-    if [ -n "$SQLITE_PATCH_URL" ]; then \
-      echo "Applying SQLite patches from: $SQLITE_PATCH_URL" && \
-      curl -fsSL "$SQLITE_PATCH_URL" -o /tmp/sqlite.diff && \
-      patch -d /var/www/html -p1 --forward < /tmp/sqlite.diff && \
-      rm -f /tmp/sqlite.diff && \
-      echo "SQLite patches applied successfully."; \
-    else \
-      echo "WARNING: No SQLite patches available for MOODLE_VERSION=$MOODLE_VERSION (sqlite3 mode will not work)"; \
-    fi
+# Apply experimental SQLite support (MDL-88218). The heavy lifting — selecting
+# the right ateeducacion/moodle patch per branch (PR #1 main/5.2, #2 5.1, #3 5.0,
+# #4 4.5), tolerating cosmetic hunk rejects, verifying the SQLite driver is
+# present, and declaring the sqlite VENDOR in the installed version's
+# environment.xml block — lives in scripts/apply-sqlite-support.sh (see its
+# header for the full rationale). Versions without a patch keep SQLite disabled.
+# Runs as nobody (like the Moodle download above) so the tree stays nobody-owned.
+COPY --chown=nobody scripts/apply-sqlite-support.sh /tmp/apply-sqlite-support.sh
+RUN sh /tmp/apply-sqlite-support.sh "$MOODLE_VERSION" && rm -f /tmp/apply-sqlite-support.sh
 
 USER root
 COPY --chown=nobody rootfs/ /
