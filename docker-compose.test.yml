@@ -4,16 +4,19 @@ services:
     build:
       context: .
       args:
-        # To use a specific Moodle version, set MOODLE_VERSION to git release tag.
-        # You can find the list of available tags at:
-        # https://api.github.com/repos/moodle/moodle/tags
+        # Moodle version to build. Set MOODLE_VERSION in the environment (e.g. in
+        # CI) to a git release tag to test a specific version; defaults to main.
+        # Available tags: https://api.github.com/repos/moodle/moodle/tags
         #
         # Example:
-        # MOODLE_VERSION: v4.5.3
-        # MOODLE_VERSION: v5.0.1
-        MOODLE_VERSION: main
+        # MOODLE_VERSION=v4.5.12 docker compose -f docker-compose.test.yml up --build
+        MOODLE_VERSION: ${MOODLE_VERSION:-main}
     environment:
       - SITE_URL=http://app:8080
+    # Mounted so the Moodle-context moosh smoke test can be run inside app:
+    #   docker compose -f docker-compose.test.yml exec app sh /tmp/run_tests.sh moosh
+    volumes:
+      - "./run_tests.sh:/tmp/run_tests.sh:ro"
     depends_on:
       - postgres
 

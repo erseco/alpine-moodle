@@ -4,12 +4,16 @@ services:
     build:
       context: .
       args:
-        MOODLE_VERSION: main
+        # Set MOODLE_VERSION in the environment to test a specific git tag;
+        # defaults to main. SQLite patches only exist for Moodle 5.0+.
+        MOODLE_VERSION: ${MOODLE_VERSION:-main}
     environment:
       - SITE_URL=http://app:8080
       - MOODLE_DATABASE_TYPE=sqlite3
     volumes:
       - moodledata:/var/www/moodledata
+      # Mounted so the moosh smoke test can run inside app (see docker-compose.test.yml).
+      - "./run_tests.sh:/tmp/run_tests.sh:ro"
 
   sut:
     image: alpine:latest
