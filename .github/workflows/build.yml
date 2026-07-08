@@ -98,21 +98,22 @@ jobs:
         run: |
           docker buildx build --load .
 
-      # Step 9: Test the built image with PostgreSQL (default)
+      # Steps 9x: Functional tests (HTTP web check + Moodle-context moosh smoke
+      # test) via the shared orchestrator tests/compose-test.sh. On pull requests
+      # the dedicated moodle-matrix workflow already runs these across every
+      # supported Moodle version, so here they run only on push/dispatch as a
+      # release smoke test (Moodle main, the default MOODLE_VERSION).
       - name: Test (PostgreSQL)
-        run: |
-          docker compose version
-          docker compose --file docker-compose.test.yml up --exit-code-from sut --timeout 10 --build
+        if: github.event_name != 'pull_request'
+        run: ./tests/compose-test.sh docker-compose.test.yml
 
-      # Step 9b: Test with MariaDB
       - name: Test (MariaDB)
-        run: |
-          docker compose --file docker-compose.test.mariadb.yml up --exit-code-from sut --timeout 10 --build
+        if: github.event_name != 'pull_request'
+        run: ./tests/compose-test.sh docker-compose.test.mariadb.yml
 
-      # Step 9c: Test with SQLite
       - name: Test (SQLite)
-        run: |
-          docker compose --file docker-compose.test.sqlite.yml up --exit-code-from sut --timeout 10 --build
+        if: github.event_name != 'pull_request'
+        run: ./tests/compose-test.sh docker-compose.test.sqlite.yml
 
       # Step 10: Build and Push to both registries in a single step
       - name: Build and push

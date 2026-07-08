@@ -4,7 +4,9 @@ services:
     build:
       context: .
       args:
-        MOODLE_VERSION: main
+        # Set MOODLE_VERSION in the environment to test a specific git tag;
+        # defaults to main.
+        MOODLE_VERSION: ${MOODLE_VERSION:-main}
     environment:
       - SITE_URL=http://app:8080
       - DB_TYPE=mariadb
@@ -13,6 +15,9 @@ services:
       - DB_NAME=moodle
       - DB_USER=moodle
       - DB_PASS=moodle
+    # Mounted so the moosh smoke test can run inside app (see docker-compose.test.yml).
+    volumes:
+      - "./run_tests.sh:/tmp/run_tests.sh:ro"
     depends_on:
       - mariadb
 
