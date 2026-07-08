@@ -2,7 +2,8 @@
 
 Status: accepted
 Background: PR #136 (introduced SQLite mode), PR #150 (version matrix CI),
-`ateeducacion/moodle` PRs #1/#2/#3 (SQLite driver) and #4 (this work, 4.5).
+`ateeducacion/moodle` PRs #1/#2/#3 (SQLite driver) and #4 (4.5) / #5 (5.2), added
+by this work.
 
 ## Problem statement
 
@@ -61,7 +62,8 @@ Two independent root causes:
 `tests/compose-test.sh docker-compose.test.sqlite.yml` per version (HTTP web
 check + SQLite DB-file check + in-container `moosh role-list`). The
 `moodle-matrix` workflow's `sqlite` job covers `v4.5.12, v5.0.8, v5.1.5, v5.2.1,
-main`, exercising SQLite patches PR #4 / #3 / #2 / #1 respectively.
+main`, exercising SQLite patches PR #4 / #3 / #2 / #5 / #1 respectively (each
+targeting its own stable branch; `main` alone uses PR #1).
 
 ## Validation performed (local, Docker 29.5.3 / Compose v5.1.4)
 
