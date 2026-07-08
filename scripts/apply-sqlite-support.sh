@@ -5,12 +5,14 @@
 # Build-time helper that enables experimental SQLite support (MDL-88218) for a
 # checked-out Moodle tree in /var/www/html.
 #
-# SQLite support comes from out-of-tree patches in ateeducacion/moodle:
-#   main / v5.2+  -> PR #1 (targets main;              adds the driver)
-#   v5.1.x        -> PR #2 (targets MOODLE_501_STABLE; adds the driver)
-#   v5.0.x        -> PR #3 (targets MOODLE_500_STABLE; adds the driver)
-#   v4.5.x        -> PR #4 (targets MOODLE_405_STABLE; repairs the legacy driver
-#                           that 4.5 still ships but that no longer installs)
+# SQLite support comes from out-of-tree patches in ateeducacion/moodle, each
+# targeting its own stable branch so the diff stays applicable as branches move:
+#   main    -> PR #1 (targets main;              adds the driver)
+#   v5.2.x  -> PR #5 (targets MOODLE_502_STABLE; adds the driver)
+#   v5.1.x  -> PR #2 (targets MOODLE_501_STABLE; adds the driver)
+#   v5.0.x  -> PR #3 (targets MOODLE_500_STABLE; adds the driver)
+#   v4.5.x  -> PR #4 (targets MOODLE_405_STABLE; repairs the legacy driver that
+#                     4.5 still ships but that no longer installs)
 # Versions without a patch keep SQLite unavailable (this is not an error).
 #
 # Two things need handling beyond a plain `patch`:
@@ -34,10 +36,11 @@ MOODLE_VERSION="${1:?usage: apply-sqlite-support.sh <MOODLE_VERSION>}"
 DIR="${MOODLE_DIR:-/var/www/html}"
 
 case "$MOODLE_VERSION" in
-  main|v5.2*) pr=1 ;;
-  v5.1*)      pr=2 ;;
-  v5.0*)      pr=3 ;;
-  v4.5*)      pr=4 ;;
+  main)  pr=1 ;;
+  v5.2*) pr=5 ;;
+  v5.1*) pr=2 ;;
+  v5.0*) pr=3 ;;
+  v4.5*) pr=4 ;;
   *)
     echo "WARNING: No SQLite patch for MOODLE_VERSION=$MOODLE_VERSION (sqlite3 mode will not work)"
     exit 0

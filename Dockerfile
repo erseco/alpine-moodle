@@ -80,8 +80,8 @@ RUN if [ "$MOODLE_VERSION" = "main" ]; then \
     curl -L "$MOODLE_URL" | tar xz --strip-components=1 -C /var/www/html/
 
 # Apply experimental SQLite support (MDL-88218). The heavy lifting — selecting
-# the right ateeducacion/moodle patch per branch (PR #1 main/5.2, #2 5.1, #3 5.0,
-# #4 4.5), tolerating cosmetic hunk rejects, verifying the SQLite driver is
+# the right ateeducacion/moodle patch per branch (PR #1 main, #5 5.2, #2 5.1,
+# #3 5.0, #4 4.5), tolerating cosmetic hunk rejects, verifying the SQLite driver is
 # present, and declaring the sqlite VENDOR in the installed version's
 # environment.xml block — lives in scripts/apply-sqlite-support.sh (see its
 # header for the full rationale). Versions without a patch keep SQLite disabled.
