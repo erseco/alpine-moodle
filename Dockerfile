@@ -5,7 +5,17 @@ ARG ARCH=
 # 3.23 = FROM alpine:3.23 (ships php84 and an unversioned /usr/bin/php -> php84).
 # Do NOT use 3.24: alpine:3.24 defaults to php85, so its `composer` runs on php85 and
 # fails against the php84-* extensions installed below.
-ARG PHP_WEBSERVER_VERSION=3.23
+#
+# Requires erseco/alpine-php-webserver with
+# https://github.com/erseco/alpine-php-webserver/pull/89 (PHP iconv linked to
+# modern GNU libiconv; first published rebuild: 3.23.4-1). That enables
+# //TRANSLIT//IGNORE on Alpine/musl and replaces the previous LD_PRELOAD +
+# gnu-libiconv 1.15-r3 workaround for https://github.com/erseco/alpine-moodle/issues/26.
+#
+# Pin the exact rebuild tag (not floating 3.23): docker/metadata-action treats
+# X.Y.Z-N as a SemVer pre-release and does not move the major.minor floating
+# tag, so erseco/alpine-php-webserver:3.23 may still be the pre-iconv image.
+ARG PHP_WEBSERVER_VERSION=3.23.4-1
 FROM ${ARCH}erseco/alpine-php-webserver:${PHP_WEBSERVER_VERSION}
 
 LABEL maintainer="Ernesto Serrano <info@ernesto.es>"
@@ -15,12 +25,6 @@ RUN apk add --no-cache composer patch php84-posix php84-xmlwriter php84-pecl-red
     php84-ldap php84-pecl-igbinary php84-exif php84-sqlite3 php84-pdo_sqlite \
     # Remove alpine cache
     && rm -rf /var/cache/apk/*
-
-# add a quick-and-dirty hack  to fix https://github.com/erseco/alpine-moodle/issues/26
-RUN apk add --no-cache gnu-libiconv=1.15-r3 --repository http://dl-cdn.alpinelinux.org/alpine/v3.13/community/ --allow-untrusted \
-    # Remove alpine cache
-    && rm -rf /var/cache/apk/*
-ENV LD_PRELOAD=/usr/lib/preloadable_libiconv.so
 
 USER nobody
 
