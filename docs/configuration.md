@@ -143,6 +143,18 @@ environment:
   RUN_CRON_TASKS: "false"
 ```
 
+## Code sync for persistent `/var/www/html`
+
+When you mount a `moodlehtml` volume, core PHP is still upgradeable by changing the image tag. On start, `SYNC_MOODLE_CODE=auto` (default) may rsync `/usr/src/moodle` → `/var/www/html` if Moodle `$version` differs. `config.php` is always kept; list extra paths in `EXTRA_PLUGIN_PATHS`.
+
+```yaml
+environment:
+  SYNC_MOODLE_CODE: auto
+  EXTRA_PLUGIN_PATHS: "mod/attendance local/mytool"
+```
+
+This is **not** the same as `AUTO_UPDATE_MOODLE` (database schema). Full explanation: [Upgrading](upgrading.md), [Persistence](persistence.md).
+
 ## Test scenario generator
 
 ```bash

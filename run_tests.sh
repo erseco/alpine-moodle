@@ -14,6 +14,12 @@ set -eu
 #     because moosh needs the Moodle codebase and DB access, which only exist
 #     there. Fails if moosh cannot bootstrap Moodle (the PR #149 regression on
 #     the 5.1+ public/ layout).
+#
+#   MODE=sync
+#     Moodle-context regression test for 010-sync-moodle-code.sh (#103). Must
+#     run INSIDE the `app` container. Simulates a stale moodlehtml volume
+#     (old stamp + leftover core file + custom plugin), re-runs the sync
+#     script, and asserts config/plugin preservation + core refresh.
 MODE="${1:-all}"
 
 # --------------------------------------------------------------------------
@@ -72,8 +78,113 @@ run_moosh_smoke_test() {
   echo "moosh Moodle-context smoke test passed."
 }
 
+# --------------------------------------------------------------------------
+# Moodle-context code-sync regression test (#103)
+# --------------------------------------------------------------------------
+run_sync_smoke_test() {
+  echo "== Moodle code sync smoke test (#103) =="
+
+  html="/var/www/html"
+  src="/usr/src/moodle"
+  script="/docker-entrypoint-init.d/010-sync-moodle-code.sh"
+  stamp="${html}/.alpine-moodle-release"
+
+  src_version_php=""
+  if [ -f "${src}/version.php" ]; then
+    src_version_php="${src}/version.php"
+  elif [ -f "${src}/public/version.php" ]; then
+    src_version_php="${src}/public/version.php"
+  fi
+  if [ -z "$src_version_php" ]; then
+    echo "ERROR: immutable Moodle source missing version.php under ${src} (or ${src}/public)"
+    exit 1
+  fi
+  if [ ! -f "$script" ]; then
+    echo "ERROR: sync script missing at $script"
+    exit 1
+  fi
+  if [ ! -f "${html}/config.php" ]; then
+    echo "ERROR: expected an installed site with config.php at ${html}/config.php"
+    exit 1
+  fi
+
+  image_ver="$(sed -n 's/^[[:space:]]*\$version[[:space:]]*=[[:space:]]*\([0-9][0-9.]*\).*/\1/p' \
+    "$src_version_php" | head -n 1)"
+  if [ -z "$image_ver" ]; then
+    echo "ERROR: could not parse image Moodle \$version from ${src_version_php}"
+    exit 1
+  fi
+  echo "Image Moodle \$version: ${image_ver} (from ${src_version_php})"
+
+  # Snapshot config.php so we can prove it survives the sync.
+  config_before="$(cksum < "${html}/config.php")"
+
+  # Simulate a stale volume: old stamp, a leftover core file, and a "custom" plugin.
+  printf '0.00\n' > "$stamp"
+  printf 'stale-core-from-old-image\n' > "${html}/STALE_CORE_FILE_FROM_OLD_IMAGE"
+  mkdir -p "${html}/local/syncsmoke"
+  printf '<?php // custom plugin marker for sync test\n' > "${html}/local/syncsmoke/version.php"
+  custom_before="$(cksum < "${html}/local/syncsmoke/version.php")"
+
+  echo "Re-running sync script with SYNC_MOODLE_CODE=auto and EXTRA_PLUGIN_PATHS=local/syncsmoke..."
+  SYNC_MOODLE_CODE=auto \
+  EXTRA_PLUGIN_PATHS="local/syncsmoke" \
+  sh "$script"
+
+  stamp_after="$(tr -d '[:space:]' < "$stamp")"
+  if [ "$stamp_after" != "$image_ver" ]; then
+    echo "ERROR: stamp not updated (got '${stamp_after}', want '${image_ver}')"
+    exit 1
+  fi
+  echo "Stamp updated to ${stamp_after}"
+
+  if [ -e "${html}/STALE_CORE_FILE_FROM_OLD_IMAGE" ]; then
+    echo "ERROR: stale core file was not removed by rsync --delete"
+    exit 1
+  fi
+  echo "Stale core file removed."
+
+  config_after="$(cksum < "${html}/config.php")"
+  if [ "$config_before" != "$config_after" ]; then
+    echo "ERROR: config.php changed during sync (before=${config_before} after=${config_after})"
+    exit 1
+  fi
+  echo "config.php preserved."
+
+  if [ ! -f "${html}/local/syncsmoke/version.php" ]; then
+    echo "ERROR: EXTRA_PLUGIN_PATHS custom plugin was not restored"
+    exit 1
+  fi
+  custom_after="$(cksum < "${html}/local/syncsmoke/version.php")"
+  if [ "$custom_before" != "$custom_after" ]; then
+    echo "ERROR: custom plugin content changed during sync"
+    exit 1
+  fi
+  echo "Custom plugin local/syncsmoke preserved."
+
+  # Second run with matching stamp must be a no-op (leave a local marker alone).
+  printf 'local-marker\n' > "${html}/SYNC_NOOP_MARKER"
+  SYNC_MOODLE_CODE=auto EXTRA_PLUGIN_PATHS="local/syncsmoke" sh "$script"
+  if [ ! -f "${html}/SYNC_NOOP_MARKER" ]; then
+    echo "ERROR: second auto sync with matching versions wiped a local marker (should no-op)"
+    exit 1
+  fi
+  echo "Matching-version auto sync is a no-op."
+
+  # Cleanup test artefacts so they don't pollute the running site.
+  rm -f "${html}/SYNC_NOOP_MARKER"
+  rm -rf "${html}/local/syncsmoke"
+
+  echo "Moodle code sync smoke test passed."
+}
+
 if [ "$MODE" = "moosh" ]; then
   run_moosh_smoke_test
+  exit 0
+fi
+
+if [ "$MODE" = "sync" ]; then
+  run_sync_smoke_test
   exit 0
 fi
 

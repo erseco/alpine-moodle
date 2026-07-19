@@ -93,6 +93,17 @@ See [Reverse Proxy](reverse-proxy.md) for concrete examples.
 | Variable                 | Default | Description |
 |--------------------------|---------|-------------|
 | `AUTO_UPDATE_MOODLE`     | `true`  | If `false`, skip the automatic `admin/cli/upgrade.php` on container start. |
+| `SYNC_MOODLE_CODE`       | `auto`  | How to refresh Moodle **PHP code** from the image into `/var/www/html` when a volume is used. **This is independent of `AUTO_UPDATE_MOODLE`** (DB schema). Values: `auto` (default) — sync when the volume is empty or its Moodle `$version` differs from the image; `always` — rsync every start; `never` — leave the volume tree untouched (legacy). See [Upgrading](upgrading.md) and [#103](https://github.com/erseco/alpine-moodle/issues/103). |
+| `EXTRA_PLUGIN_PATHS`     | *(empty)* | Space-separated paths **relative** to `/var/www/html` preserved across a code sync (e.g. `mod/attendance theme/space local/mytool`). Rejects absolute paths and `..`. Prefer `PLUGINS` / Moosh when you can reinstall declaratively. |
+
+### Code sync vs database upgrade
+
+| Knob | What it updates | When |
+|------|-----------------|------|
+| `SYNC_MOODLE_CODE` | PHP files under `/var/www/html` (from `/usr/src/moodle`) | Before install/upgrade CLI runs |
+| `AUTO_UPDATE_MOODLE` | Database schema via `admin/cli/upgrade.php` | After code is in place |
+
+Stamp file written after a successful sync: `/var/www/html/.alpine-moodle-release` (Moodle `$version` id).
 | `RUN_CRON_TASKS`         | `true`  | Set to `false` to disable the internal `runit`-managed cron loop. Useful when you run cron externally. |
 | `DEBUG`                  | `false` | When `true`, enables Moodle `DEVELOPER` debug level and `debugdisplay`. |
 | `PRE_CONFIGURE_COMMANDS` | *(empty)* | Shell commands run **before** Moodle configuration. |

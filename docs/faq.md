@@ -52,6 +52,10 @@ Yes — set `RUN_CRON_TASKS=false`. You are then responsible for running `admin/
 
 Yes — set `AUTO_UPDATE_MOODLE=false`. The container will start without running `admin/cli/upgrade.php`; you must run it yourself before letting users back in.
 
+## Why didn't changing the image tag upgrade my site?
+
+`AUTO_UPDATE_MOODLE` only runs the **database** upgrade. If `/var/www/html` is a named volume, older images left the PHP tree pinned on the volume ([#102](https://github.com/erseco/alpine-moodle/issues/102)). Current images run a **code sync** first (`SYNC_MOODLE_CODE=auto`): when the volume's Moodle `$version` differs from the image, core is rsynced from `/usr/src/moodle` while `config.php` (and optional `EXTRA_PLUGIN_PATHS`) are preserved, then `upgrade.php` runs. See [Upgrading](upgrading.md).
+
 ## Which architectures are supported?
 
 `amd64`, `arm64`, `arm/v7`, `arm/v6`, `386`, `ppc64le`, `s390x`. Pull `erseco/alpine-moodle` on any of them and Docker will fetch the right variant.

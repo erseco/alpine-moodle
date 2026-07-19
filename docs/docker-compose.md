@@ -20,16 +20,21 @@ services:
 
   moodle:
     image: erseco/alpine-moodle
+    # Pin a release for production, e.g. erseco/alpine-moodle:v5.0.2
     restart: unless-stopped
     environment:
       SITE_URL: http://localhost
       MOODLE_USERNAME: admin
       MOODLE_PASSWORD: ChangeMe123!
+      # Default: refresh Moodle PHP core from the image when the volume is on an
+      # older $version (no need to docker volume rm moodlehtml). See Upgrading.
+      # SYNC_MOODLE_CODE: auto
+      # EXTRA_PLUGIN_PATHS: "mod/attendance theme/space"
     ports:
       - "80:8080"
     volumes:
       - moodledata:/var/www/moodledata
-      - moodlehtml:/var/www/html
+      - moodlehtml:/var/www/html   # safe with SYNC_MOODLE_CODE=auto (default)
     depends_on:
       - postgres
 
@@ -38,6 +43,10 @@ volumes:
   moodledata:
   moodlehtml:
 ```
+
+!!! tip "Upgrading this stack"
+    Change the image tag → `docker compose pull && docker compose up -d`.
+    With `moodlehtml` mounted, `SYNC_MOODLE_CODE=auto` (default) rsyncs core from the new image, keeps `config.php`, then runs `upgrade.php`. Details: [Upgrading](upgrading.md).
 
 ## Persistent deployment with Redis
 

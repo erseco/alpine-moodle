@@ -77,4 +77,13 @@ if ! dc exec -T -e MOODLE_VERSION="${MOODLE_VERSION}" app sh /tmp/run_tests.sh m
   exit 1
 fi
 
+# 3) Moodle code-sync regression test (#103): stale volume → rsync core, keep
+#    config.php + EXTRA_PLUGIN_PATHS. Runs inside app (needs real trees).
+echo ">> Running the Moodle code-sync smoke test inside app..."
+if ! dc exec -T app sh /tmp/run_tests.sh sync; then
+  echo "ERROR: code-sync smoke test failed for Moodle ${MOODLE_VERSION} (${FILE})."
+  dump_logs
+  exit 1
+fi
+
 echo ">> All checks passed for Moodle ${MOODLE_VERSION} (${FILE})."
