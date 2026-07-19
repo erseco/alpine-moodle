@@ -1,11 +1,11 @@
 ARG ARCH=
-# Requires erseco/alpine-php-webserver build including
+# Requires erseco/alpine-php-webserver 3.20.x with
 # https://github.com/erseco/alpine-php-webserver/pull/92 (PHP iconv linked to
 # modern GNU libiconv). That enables //TRANSLIT//IGNORE on Alpine/musl and
 # replaces the previous LD_PRELOAD + gnu-libiconv 1.15-r3 workaround for
 # https://github.com/erseco/alpine-moodle/issues/26.
-# 3.20.11 is the first 3.20.x release with GNU libiconv-linked PHP iconv (#92).
-ARG PHP_WEBSERVER_VERSION=3.20.11
+# Pin major.minor so we track the latest 3.20.x patch (3.20.11+, e.g. 3.20.12).
+ARG PHP_WEBSERVER_VERSION=3.20
 FROM ${ARCH}erseco/alpine-php-webserver:${PHP_WEBSERVER_VERSION}
 
 LABEL maintainer="Ernesto Serrano <info@ernesto.es>"
