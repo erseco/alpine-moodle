@@ -6,16 +6,13 @@ ARG ARCH=
 # Do NOT use 3.24: alpine:3.24 defaults to php85, so its `composer` runs on php85 and
 # fails against the php84-* extensions installed below.
 #
-# Requires erseco/alpine-php-webserver with
+# Requires erseco/alpine-php-webserver 3.23.x with
 # https://github.com/erseco/alpine-php-webserver/pull/89 (PHP iconv linked to
-# modern GNU libiconv; first published rebuild: 3.23.4-1). That enables
+# modern GNU libiconv; first good rebuild: 3.23.4-1). That enables
 # //TRANSLIT//IGNORE on Alpine/musl and replaces the previous LD_PRELOAD +
 # gnu-libiconv 1.15-r3 workaround for https://github.com/erseco/alpine-moodle/issues/26.
-#
-# Pin the exact rebuild tag (not floating 3.23): docker/metadata-action treats
-# X.Y.Z-N as a SemVer pre-release and does not move the major.minor floating
-# tag, so erseco/alpine-php-webserver:3.23 may still be the pre-iconv image.
-ARG PHP_WEBSERVER_VERSION=3.23.4-1
+# Pin major.minor so we track the latest 3.23.x rebuild (3.23.4-1, 3.23.5, …).
+ARG PHP_WEBSERVER_VERSION=3.23
 FROM ${ARCH}erseco/alpine-php-webserver:${PHP_WEBSERVER_VERSION}
 
 LABEL maintainer="Ernesto Serrano <info@ernesto.es>"
