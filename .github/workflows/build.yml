@@ -92,6 +92,10 @@ jobs:
             echo "version=main" >> $GITHUB_OUTPUT
           fi
 
+      # Fast, docker-free coverage of 010-sync-moodle-code.sh (#103).
+      - name: Unit test (Moodle code sync)
+        run: ./tests/unit/test-sync-moodle-code.sh
+
       # Step 8: Test build (for PRs)
       - name: Debug Build on PR
         if: github.event_name == 'pull_request'
@@ -99,10 +103,10 @@ jobs:
           docker buildx build --load .
 
       # Steps 9x: Functional tests (HTTP web check + Moodle-context moosh smoke
-      # test) via the shared orchestrator tests/compose-test.sh. On pull requests
-      # the dedicated moodle-matrix workflow already runs these across every
-      # supported Moodle version, so here they run only on push/dispatch as a
-      # release smoke test (Moodle main, the default MOODLE_VERSION).
+      # + code-sync regression) via the shared orchestrator tests/compose-test.sh.
+      # On pull requests the dedicated moodle-matrix workflow already runs these
+      # across every supported Moodle version, so here they run only on
+      # push/dispatch as a release smoke test (Moodle main, the default MOODLE_VERSION).
       - name: Test (PostgreSQL)
         if: github.event_name != 'pull_request'
         run: ./tests/compose-test.sh docker-compose.test.yml

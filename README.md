@@ -128,6 +128,8 @@ Define the ENV variables in `docker-compose.yml`. The full reference with notes,
 | `MOODLE_MAIL_NOREPLY_ADDRESS` | `noreply@localhost` | No-reply address. |
 | `MOODLE_MAIL_PREFIX`        | `[moodle]`           | Email subject prefix. |
 | `AUTO_UPDATE_MOODLE`        | `true`               | Set to `false` to skip `admin/cli/upgrade.php` on container start. |
+| `SYNC_MOODLE_CODE`          | `auto`               | Refresh Moodle PHP code from the image into a persistent `moodlehtml` volume when versions differ (`auto` / `always` / `never`). See [upgrading](https://erseco.github.io/alpine-moodle/upgrading/). |
+| `EXTRA_PLUGIN_PATHS`        | *(empty)*            | Space-separated relative paths under `/var/www/html` preserved across a code sync (e.g. `mod/attendance theme/space`). |
 | `DEBUG`                     | `false`              | When `true`, enables Moodle `DEVELOPER` debug level. |
 | `client_max_body_size`      | `50M`                | Nginx max request body size. |
 | `post_max_size`             | `50M`                | PHP `post_max_size`. |
