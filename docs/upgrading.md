@@ -2,6 +2,11 @@
 
 How to move between Moodle versions safely.
 
+!!! tip "Moving to Moodle 5.x? PHP 8.4 is available"
+    Once you are on Moodle 5.x you can optionally switch to the PHP 8.4 image line by
+    pulling the `-php84` tag (e.g. `v5.2.1-php84`). The default tags stay on PHP 8.3.
+    See [PHP 8.4 (opt-in)](php84.md). Do **not** use `-php84` tags on Moodle 4.x.
+
 ## The basics
 
 The image applies Moodle database upgrades automatically on startup unless you opt out:
@@ -17,43 +22,24 @@ Steps the container takes on start, when an existing installation is detected:
 2. `admin/cli/upgrade.php --non-interactive --allow-unstable`
 3. `admin/cli/maintenance.php --disable`
 
-This covers **database schema** upgrades. It does **not** by itself swap out the Moodle PHP code — that depends on how you handle the `/var/www/html` volume.
+This covers **database schema** upgrades. Replacing the Moodle **PHP code** is handled separately by the version-aware code sync (`SYNC_MOODLE_CODE`, default `auto`) when you use a persistent `moodlehtml` volume ([#103](https://github.com/erseco/alpine-moodle/issues/103)).
 
 ## Upgrading the Moodle code
 
-Your upgrade procedure depends on whether you persist `/var/www/html` as a named volume.
+=== "With `moodlehtml` volume (auto sync)"
 
-=== "Without `moodlehtml` volume"
+    On start, if the volume's Moodle `$version` differs from the image, the container:
 
-    The container replaces the Moodle code on every start. Upgrading is just:
+    1. Preserves `config.php` and any `EXTRA_PLUGIN_PATHS`
+    2. Rsyncs `/usr/src/moodle/` → `/var/www/html/` (`--delete` removes leftover core files)
+    3. Restores the preserved paths
+    4. Writes `.alpine-moodle-release`
+    5. Continues with the usual `AUTO_UPDATE_MOODLE` / `upgrade.php` flow
 
-    ```bash
-    docker compose pull
-    docker compose up -d
-    ```
+    Operator steps:
 
-    Trade-off: plugins and themes must be re-installed on every boot (use `POST_CONFIGURE_COMMANDS` with Moosh).
-
-=== "With `moodlehtml` volume"
-
-    Pinned Moodle code in a persistent volume will **not** be overwritten when you change the image tag ([#102](https://github.com/erseco/alpine-moodle/issues/102)). You will see logs like:
-
-    ```
-    No upgrade needed for the installed version 5.0.1 (Build: 20250609). Thanks for coming anyway!
-    ```
-
-    To actually upgrade:
-
-    1. Back up the database, `moodledata`, and `moodlehtml` (see [Persistence & Volumes](persistence.md)).
-    2. Put the site into maintenance mode (optional but recommended).
-    3. Stop the stack and remove the `moodlehtml` volume:
-
-        ```bash
-        docker compose down
-        docker volume rm <project>_moodlehtml
-        ```
-
-    4. Change the image tag in `docker-compose.yml`:
+    1. Back up the database and `moodledata` (see [Persistence & Volumes](persistence.md)).
+    2. Change the image tag:
 
         ```yaml
         services:
@@ -61,7 +47,7 @@ Your upgrade procedure depends on whether you persist `/var/www/html` as a named
             image: erseco/alpine-moodle:v5.0.2
         ```
 
-    5. Bring it back up:
+    3. Pull and recreate:
 
         ```bash
         docker compose pull
@@ -69,10 +55,41 @@ Your upgrade procedure depends on whether you persist `/var/www/html` as a named
         docker compose logs -f moodle
         ```
 
-    6. Reinstall any custom plugins and themes.
+        Look for a log line like `Moodle code sync: 2025041401.00 → 2025041402.00`.
+
+    Custom plugins that live only on the volume should either be listed in `EXTRA_PLUGIN_PATHS` (e.g. `mod/attendance theme/space`) or reinstalled declaratively via `PLUGINS` / Moosh after each sync.
+
+    To keep today's "volume always wins" behaviour (no automatic core refresh):
+
+    ```yaml
+    environment:
+      SYNC_MOODLE_CODE: "never"
+    ```
+
+=== "Without `moodlehtml` volume"
+
+    The container filesystem *is* the code. Upgrading is just:
+
+    ```bash
+    docker compose pull
+    docker compose up -d
+    ```
+
+    Re-install plugins on every recreate with `PLUGINS` or `POST_CONFIGURE_COMMANDS` + Moosh.
+
+=== "Legacy: wipe `moodlehtml`"
+
+    Still valid if you want a clean tree:
+
+    ```bash
+    docker compose down
+    docker volume rm <project>_moodlehtml
+    docker compose pull
+    docker compose up -d
+    ```
 
 !!! warning "Always back up first"
-    Upgrades that involve removing volumes are irreversible. Take a database dump and a tarball of `moodledata` before you run `docker volume rm`.
+    Take a database dump and a tarball of `moodledata` before major upgrades. Code sync replaces files under `/var/www/html` (except `config.php` and `EXTRA_PLUGIN_PATHS`).
 
 ## Upgrading from Moodle < 5.1 to ≥ 5.1
 

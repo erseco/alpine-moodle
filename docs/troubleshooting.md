@@ -132,22 +132,33 @@ For bind mounts only. Named Docker volumes get the right ownership automatically
 
 ## Plugins disappear after upgrading
 
-**Cause**: The `moodlehtml` volume was removed during the upgrade. Plugins live inside `/var/www/html/...`. Related: [#9](https://github.com/erseco/alpine-moodle/issues/9), [#103](https://github.com/erseco/alpine-moodle/issues/103).
+**Cause**: Either the `moodlehtml` volume was wiped, or a code sync (`SYNC_MOODLE_CODE=auto`) replaced core and a custom plugin path was **not** listed in `EXTRA_PLUGIN_PATHS` / reinstalled via `PLUGINS` or Moosh. Related: [#9](https://github.com/erseco/alpine-moodle/issues/9), [#103](https://github.com/erseco/alpine-moodle/issues/103).
 
-**Fix**: Reinstall via `POST_CONFIGURE_COMMANDS` so they are reapplied automatically:
+**Fix** — prefer declarative reinstall so plugins survive every boot:
 
 ```yaml
 environment:
   POST_CONFIGURE_COMMANDS: |
     moosh plugin-list
     moosh plugin-install --delete mod_attendance
+  # Or list volume-only paths that must survive rsync:
+  # EXTRA_PLUGIN_PATHS: "mod/attendance theme/space"
 ```
 
 ## Upgrade seems to do nothing — "No upgrade needed"
 
-**Cause**: Old Moodle code is still in the `moodlehtml` volume because you changed the image tag without clearing it. Related: [#102](https://github.com/erseco/alpine-moodle/issues/102).
+**Cause**: `AUTO_UPDATE_MOODLE` only runs the **database** upgrade. If the PHP tree on a `moodlehtml` volume is still the old release, Moodle correctly reports that no DB upgrade is needed. Related: [#102](https://github.com/erseco/alpine-moodle/issues/102), [#103](https://github.com/erseco/alpine-moodle/issues/103).
 
-**Fix**: Back up, then remove the `moodlehtml` volume and restart:
+**Current images** ship `SYNC_MOODLE_CODE=auto` (default): on start they compare Moodle `$version` in the volume with the image and rsync core from `/usr/src/moodle` when they differ, then run `upgrade.php`.
+
+**Check**:
+
+```bash
+docker compose logs moodle | grep -E 'Moodle code sync|Upgrading moodle'
+# Expect: Moodle code sync: 2025041401.00 → 2025041402.00
+```
+
+**If you are on an older image** without code sync, either upgrade the image or wipe the code volume once:
 
 ```bash
 docker compose down
@@ -155,6 +166,8 @@ docker volume rm <project>_moodlehtml
 docker compose pull
 docker compose up -d
 ```
+
+**If sync is disabled** (`SYNC_MOODLE_CODE=never`), re-enable `auto` or wipe the volume as above.
 
 See [Upgrading](upgrading.md) for the full procedure.
 

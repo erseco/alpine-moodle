@@ -15,10 +15,11 @@ and is configured entirely through environment variables.
 
 Highlights:
 
-- PHP 8.3 FPM with `ondemand` process manager — low idle footprint
+- **PHP 8.4** FPM with `ondemand` process manager — this docs tree is built from the `php84` image line (`-php84` tags; Moodle **5.x+ only**)
 - Works with PostgreSQL, MariaDB/MySQL, or SQLite (single-container dev mode)
 - Optional Redis session handler for HA deployments
-- Supports Moodle **4.x**, **5.0**, **5.1** (with `/public` directory) and `main`
+- Supports Moodle **5.0**, **5.1** (with `/public` directory), **5.2+** and `main`
+- **Version-aware code sync** (`SYNC_MOODLE_CODE=auto`) — upgrade Moodle core by changing the image tag even with a persistent `moodlehtml` volume ([Upgrading](upgrading.md), [#103](https://github.com/erseco/alpine-moodle/issues/103))
 - Multi-arch images: `amd64`, `arm64`, `arm/v7`, `arm/v6`, `386`, `ppc64le`, `s390x`
 - Internal cron via `runit` (configurable)
 - Logs go straight to `docker logs`
@@ -33,6 +34,7 @@ Highlights:
 - :material-shield-lock: **[Reverse Proxy](reverse-proxy.md)** — Traefik, Nginx, NPM, Apache, Caddy recipes.
 - :material-database: **[Environment Variables](environment-variables.md)** — every supported knob, with defaults.
 - :material-harddisk: **[Persistence & Volumes](persistence.md)** — what to mount and what to back up.
+- :material-language-php: **[PHP 8.4 (opt-in)](php84.md)** — `-php84` tags for Moodle 5.x while the default stays on PHP 8.3.
 - :material-update: **[Upgrading](upgrading.md)** — how to move between Moodle versions safely.
 - :material-lightbulb-on: **[Troubleshooting](troubleshooting.md)** — solutions to the most common deployment issues.
 - :material-help-circle: **[FAQ](faq.md)** — short answers to recurring questions.

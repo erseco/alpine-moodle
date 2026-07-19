@@ -163,6 +163,10 @@ jobs:
           sarif_file: hadolint-results.sarif
           category: hadolint-dockerfile-php84
 
+      # Fast, docker-free coverage of 010-sync-moodle-code.sh (#103).
+      - name: Unit test (Moodle code sync)
+        run: ./tests/unit/test-sync-moodle-code.sh
+
       # Step 8: Smoke test the PHP 8.4 image across the three database backends.
       # These compose files build the Dockerfile in this branch (PHP 8.4), so a
       # green run also proves the php84-* packages resolve and Moodle boots.

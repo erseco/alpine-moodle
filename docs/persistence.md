@@ -37,28 +37,42 @@ volumes:
 
 ## The `moodlehtml` tradeoff
 
-Mounting `/var/www/html` as a named volume preserves installed plugins, custom themes, and `config.php` between container restarts. **The cost is that upgrading Moodle by changing the image tag alone does not work**, because the old code is kept on the volume ([#102](https://github.com/erseco/alpine-moodle/issues/102), [#103](https://github.com/erseco/alpine-moodle/issues/103)).
+Mounting `/var/www/html` as a named volume preserves `config.php` and any custom plugin/theme files you keep there. Historically the cost was that **changing the image tag alone did not refresh Moodle core**, because the volume kept the old tree ([#102](https://github.com/erseco/alpine-moodle/issues/102), [#103](https://github.com/erseco/alpine-moodle/issues/103)).
 
-You have two patterns:
+Current images ship **version-aware code sync** (`SYNC_MOODLE_CODE=auto` by default): on start, if the volume's Moodle `$version` differs from the image, the container rsyncs the immutable tree at `/usr/src/moodle` into `/var/www/html`, preserves `config.php`, restores any paths listed in `EXTRA_PLUGIN_PATHS`, then runs the usual `upgrade.php` flow.
 
-=== "Persistent `moodlehtml` (default)"
+You still have three patterns:
 
-    Pros: plugins and themes survive restarts, `config.php` keeps customisations.
+=== "Persistent `moodlehtml` + auto sync (recommended with volumes)"
 
-    Cons: to upgrade Moodle you need to remove the `moodlehtml` volume, start the new image, then re-apply plugins/themes. Always back up first.
+    Pros: change the image tag to upgrade core; `config.php` is kept; optional custom paths via `EXTRA_PLUGIN_PATHS`.
+
+    ```yaml
+    services:
+      moodle:
+        image: erseco/alpine-moodle:v5.0.2
+        volumes:
+          - moodledata:/var/www/moodledata
+          - moodlehtml:/var/www/html
+        environment:
+          SYNC_MOODLE_CODE: auto          # default
+          EXTRA_PLUGIN_PATHS: "mod/attendance theme/space"
+          # Prefer declarative installs when possible:
+          # PLUGINS: "mod_attendance=https://…/attendance.zip"
+    ```
 
     ```bash
-    docker compose down
-    docker volume rm <project>_moodlehtml
     docker compose pull
     docker compose up -d
     ```
 
-=== "Ephemeral `moodlehtml`"
+    Set `SYNC_MOODLE_CODE=never` only if you deliberately maintain a patched tree inside the volume and do **not** want image tags to overwrite it.
 
-    Pros: upgrading Moodle is just `docker compose pull && docker compose up -d`.
+=== "Ephemeral `moodlehtml` (no code volume)"
 
-    Cons: you must re-install plugins and re-apply theme customisations on every rebuild, or install them via `POST_CONFIGURE_COMMANDS` on every start.
+    Pros: simplest mental model — the container *is* the code.
+
+    Cons: re-install plugins on every recreate (use `PLUGINS` or Moosh in `POST_CONFIGURE_COMMANDS`).
 
     ```yaml
     services:
@@ -68,17 +82,16 @@ You have two patterns:
           # no moodlehtml volume
     ```
 
-    Pair this with idempotent Moosh commands:
+=== "Manual volume wipe (legacy)"
 
-    ```yaml
-    environment:
-      POST_CONFIGURE_COMMANDS: |
-        moosh plugin-list
-        moosh plugin-install --delete mod_attendance
+    Still works if you prefer a clean tree:
+
+    ```bash
+    docker compose down
+    docker volume rm <project>_moodlehtml
+    docker compose pull
+    docker compose up -d
     ```
-
-!!! info "Future improvement"
-    [#103](https://github.com/erseco/alpine-moodle/issues/103) tracks a finer-grained approach that would persist only `config.php`, themes and modules. Until that lands, pick the pattern that matches your risk tolerance.
 
 ## PostgreSQL 18+ volume path
 

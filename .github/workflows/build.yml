@@ -94,6 +94,10 @@ jobs:
             echo "version=main" >> $GITHUB_OUTPUT
           fi
 
+      # Fast, docker-free coverage of 010-sync-moodle-code.sh (#103).
+      - name: Unit test (Moodle code sync)
+        run: ./tests/unit/test-sync-moodle-code.sh
+
       # Step 8: Test build (for PRs)
       - name: Debug Build on PR
         if: github.event_name == 'pull_request'

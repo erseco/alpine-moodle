@@ -18,10 +18,14 @@ FROM ${ARCH}erseco/alpine-php-webserver:${PHP_WEBSERVER_VERSION}
 LABEL maintainer="Ernesto Serrano <info@ernesto.es>"
 
 USER root
-RUN apk add --no-cache composer patch php84-posix php84-xmlwriter php84-pecl-redis \
+RUN apk add --no-cache composer patch rsync php84-posix php84-xmlwriter php84-pecl-redis \
     php84-ldap php84-pecl-igbinary php84-exif php84-sqlite3 php84-pdo_sqlite \
     # Remove alpine cache
-    && rm -rf /var/cache/apk/*
+    && rm -rf /var/cache/apk/* \
+    # Immutable Moodle source tree used by 010-sync-moodle-code.sh to refresh
+    # /var/www/html when a named volume holds an older release (#103).
+    && mkdir -p /usr/src/moodle \
+    && chown nobody:nobody /usr/src/moodle
 
 USER nobody
 
@@ -61,6 +65,11 @@ ENV LANG=en_US.UTF-8 \
     MOODLE_MAIL_NOREPLY_ADDRESS=noreply@localhost \
     MOODLE_MAIL_PREFIX=[moodle] \
     AUTO_UPDATE_MOODLE=true \
+    # auto: rsync /usr/src/moodle → /var/www/html when the volume's Moodle
+    # $version differs from the image (or the tree is empty). always/never
+    # override. See docs/upgrading.md and #103.
+    SYNC_MOODLE_CODE=auto \
+    EXTRA_PLUGIN_PATHS= \
     DEBUG=false \
     client_max_body_size=50M \
     post_max_size=50M \
@@ -75,14 +84,16 @@ ENV LANG=en_US.UTF-8 \
 # Example:
 # MOODLE_VERSION=v4.5.3
 #
-# Download and extract Moodle
+# Download and extract Moodle into the immutable source tree, then seed the
+# runtime document root. Runtime upgrades of a persistent moodlehtml volume are
+# handled by rootfs/docker-entrypoint-init.d/010-sync-moodle-code.sh.
 RUN if [ "$MOODLE_VERSION" = "main" ]; then \
       MOODLE_URL="https://github.com/moodle/moodle/archive/main.tar.gz"; \
     else \
       MOODLE_URL="https://github.com/moodle/moodle/tarball/refs/tags/${MOODLE_VERSION}"; \
     fi && \
     echo "Downloading Moodle from: $MOODLE_URL" && \
-    curl -L "$MOODLE_URL" | tar xz --strip-components=1 -C /var/www/html/
+    curl -L "$MOODLE_URL" | tar xz --strip-components=1 -C /usr/src/moodle
 
 # Apply experimental SQLite patches (MDL-88218) from ateeducacion/moodle.
 # Each Moodle release branch has a matching patch PR:
@@ -99,12 +110,21 @@ RUN SQLITE_PATCH_URL="" && \
     if [ -n "$SQLITE_PATCH_URL" ]; then \
       echo "Applying SQLite patches from: $SQLITE_PATCH_URL" && \
       curl -fsSL "$SQLITE_PATCH_URL" -o /tmp/sqlite.diff && \
-      patch -d /var/www/html -p1 --forward < /tmp/sqlite.diff && \
+      patch -d /usr/src/moodle -p1 --forward < /tmp/sqlite.diff && \
       rm -f /tmp/sqlite.diff && \
       echo "SQLite patches applied successfully."; \
     else \
       echo "WARNING: No SQLite patches available for MOODLE_VERSION=$MOODLE_VERSION (sqlite3 mode will not work)"; \
-    fi
+    fi && \
+    # Seed the runtime tree and write the release stamp used by the sync script.
+    # Moodle <5.1 keeps version.php at the tree root; 5.1+ moved it under public/.
+    cp -a /usr/src/moodle/. /var/www/html/ && \
+    VERSION_PHP=/usr/src/moodle/version.php && \
+    if [ ! -f "$VERSION_PHP" ]; then VERSION_PHP=/usr/src/moodle/public/version.php; fi && \
+    sed -n 's/^[[:space:]]*\$version[[:space:]]*=[[:space:]]*\([0-9][0-9.]*\).*/\1/p' \
+         "$VERSION_PHP" | head -n 1 \
+         > /var/www/html/.alpine-moodle-release && \
+    cp /var/www/html/.alpine-moodle-release /usr/src/moodle/.alpine-moodle-release
 
 USER root
 COPY --chown=nobody rootfs/ /

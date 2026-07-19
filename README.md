@@ -50,11 +50,13 @@ services:
       - postgres:/var/lib/postgresql
 
   moodle:
-    image: erseco/alpine-moodle
+    image: erseco/alpine-moodle:v5.2.1-php84   # pin a -php84 release for production
     restart: unless-stopped
     environment:
       MOODLE_USERNAME: admin
       MOODLE_PASSWORD: ChangeMe123!
+      # SYNC_MOODLE_CODE: auto   # default — refreshes core from the image on tag change
+      # EXTRA_PLUGIN_PATHS: "mod/attendance theme/space"
     ports:
       - "80:8080"
     volumes:
@@ -73,7 +75,35 @@ volumes:
 docker compose up -d
 ```
 
-For production deployments (reverse proxy, TLS, Redis, tuning, upgrades), see the [documentation site](https://erseco.github.io/alpine-moodle/).
+### Upgrading Moodle (important)
+
+`AUTO_UPDATE_MOODLE` only runs the **database** upgrade (`admin/cli/upgrade.php`). The **PHP code** is handled separately:
+
+| Setup | How code upgrades |
+|-------|-------------------|
+| **With `moodlehtml` volume** (example above) | **Automatic.** Default `SYNC_MOODLE_CODE=auto` compares Moodle `$version` in the volume with the image. On mismatch it rsyncs core from `/usr/src/moodle` → `/var/www/html`, keeps `config.php`, restores optional `EXTRA_PLUGIN_PATHS`, then runs `upgrade.php`. |
+| **Without `moodlehtml`** | The container *is* the code — `docker compose pull && up` is enough. Reinstall plugins via `PLUGINS` / Moosh if needed. |
+
+```bash
+# 1. Change the image tag (e.g. v5.0.1-php84 → v5.0.2-php84)
+# 2. Pull and recreate
+docker compose pull
+docker compose up -d
+docker compose logs -f moodle
+# Look for: Moodle code sync: 2025041401.00 → 2025041402.00
+```
+
+Preserve custom plugins that live only on the volume:
+
+```yaml
+environment:
+  SYNC_MOODLE_CODE: auto
+  EXTRA_PLUGIN_PATHS: "mod/attendance theme/space local/mytool"
+```
+
+Full details: [Upgrading](https://erseco.github.io/alpine-moodle/upgrading/) · [Persistence](https://erseco.github.io/alpine-moodle/persistence/) · issue [#103](https://github.com/erseco/alpine-moodle/issues/103).
+
+For production deployments (reverse proxy, TLS, Redis, tuning), see the [documentation site](https://erseco.github.io/alpine-moodle/).
 
 ## Running Commands as Root
 
@@ -132,6 +162,8 @@ Define the ENV variables in `docker-compose.yml`. The full reference with notes,
 | `MOODLE_MAIL_NOREPLY_ADDRESS` | `noreply@localhost` | No-reply address. |
 | `MOODLE_MAIL_PREFIX`        | `[moodle]`           | Email subject prefix. |
 | `AUTO_UPDATE_MOODLE`        | `true`               | Set to `false` to skip `admin/cli/upgrade.php` on container start. |
+| `SYNC_MOODLE_CODE`          | `auto`               | Refresh Moodle PHP code from the image into a persistent `moodlehtml` volume when versions differ (`auto` / `always` / `never`). See [upgrading](https://erseco.github.io/alpine-moodle/upgrading/). |
+| `EXTRA_PLUGIN_PATHS`        | *(empty)*            | Space-separated relative paths under `/var/www/html` preserved across a code sync (e.g. `mod/attendance theme/space`). |
 | `DEBUG`                     | `false`              | When `true`, enables Moodle `DEVELOPER` debug level. |
 | `client_max_body_size`      | `50M`                | Nginx max request body size. |
 | `post_max_size`             | `50M`                | PHP `post_max_size`. |
