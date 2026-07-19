@@ -19,6 +19,7 @@ Highlights:
 - Works with PostgreSQL, MariaDB/MySQL, or SQLite (single-container dev mode)
 - Optional Redis session handler for HA deployments
 - Supports Moodle **4.x**, **5.0**, **5.1** (with `/public` directory) and `main`
+- **Version-aware code sync** (`SYNC_MOODLE_CODE=auto`) — upgrade Moodle core by changing the image tag even with a persistent `moodlehtml` volume ([Upgrading](upgrading.md), [#103](https://github.com/erseco/alpine-moodle/issues/103))
 - Multi-arch images: `amd64`, `arm64`, `arm/v7`, `arm/v6`, `386`, `ppc64le`, `s390x`
 - Internal cron via `runit` (configurable)
 - Logs go straight to `docker logs`
