@@ -1,5 +1,12 @@
 ARG ARCH=
-FROM ${ARCH}erseco/alpine-php-webserver:3.20
+# Requires erseco/alpine-php-webserver build including
+# https://github.com/erseco/alpine-php-webserver/pull/92 (PHP iconv linked to
+# modern GNU libiconv). That enables //TRANSLIT//IGNORE on Alpine/musl and
+# replaces the previous LD_PRELOAD + gnu-libiconv 1.15-r3 workaround for
+# https://github.com/erseco/alpine-moodle/issues/26.
+# 3.20.11 is the first 3.20.x release with GNU libiconv-linked PHP iconv (#92).
+ARG PHP_WEBSERVER_VERSION=3.20.11
+FROM ${ARCH}erseco/alpine-php-webserver:${PHP_WEBSERVER_VERSION}
 
 LABEL maintainer="Ernesto Serrano <info@ernesto.es>"
 
@@ -11,12 +18,6 @@ RUN apk add --no-cache composer patch php83-posix php83-xmlwriter php83-pecl-red
     php83-zip \
     # Remove alpine cache
     && rm -rf /var/cache/apk/*
-
-# add a quick-and-dirty hack  to fix https://github.com/erseco/alpine-moodle/issues/26
-RUN apk add --no-cache gnu-libiconv=1.15-r3 --repository http://dl-cdn.alpinelinux.org/alpine/v3.13/community/ --allow-untrusted \
-    # Remove alpine cache
-    && rm -rf /var/cache/apk/*
-ENV LD_PRELOAD=/usr/lib/preloadable_libiconv.so
 
 USER nobody
 
