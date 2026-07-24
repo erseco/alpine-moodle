@@ -26,6 +26,7 @@ concurrency:
 jobs:
   # PostgreSQL (the default backend) covers every Moodle version.
   postgres:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: "Moodle ${{ matrix.moodle }} · PostgreSQL"
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -43,6 +44,7 @@ jobs:
 
   # MariaDB on a representative subset: one legacy + one public/ layout.
   mariadb:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: "Moodle ${{ matrix.moodle }} · MariaDB"
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -63,6 +65,7 @@ jobs:
   # ateeducacion/moodle SQLite patch: PR #1 (5.2/main), PR #2 (5.1), PR #3 (5.0)
   # and PR #4 (4.5). See specs/ci-moodle-sqlite-4.5-5.x.md.
   sqlite:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: "Moodle ${{ matrix.moodle }} · SQLite"
     runs-on: ubuntu-latest
     timeout-minutes: 30
