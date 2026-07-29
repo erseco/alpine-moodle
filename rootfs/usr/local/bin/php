@@ -1,5 +1,5 @@
 #!/bin/sh
-exec /usr/bin/php83 \
+exec /usr/bin/php84 \
   -d upload_max_filesize="${upload_max_filesize:-50M}" \
   -d post_max_size="${post_max_size:-50M}" \
   -d max_input_vars="${max_input_vars:-5000}" \

@@ -1,21 +1,28 @@
 ARG ARCH=
-# Requires erseco/alpine-php-webserver 3.20.x with
-# https://github.com/erseco/alpine-php-webserver/pull/92 (PHP iconv linked to
-# modern GNU libiconv). That enables //TRANSLIT//IGNORE on Alpine/musl and
-# replaces the previous LD_PRELOAD + gnu-libiconv 1.15-r3 workaround for
-# https://github.com/erseco/alpine-moodle/issues/26.
-# Pin major.minor so we track the latest 3.20.x patch (3.20.11+, e.g. 3.20.12).
-ARG PHP_WEBSERVER_VERSION=3.20
+# PHP 8.4 variant: this branch builds the -php84 image line (Moodle 5.x and later).
+# Pin to the erseco/alpine-php-webserver tag whose Alpine base *defaults* to PHP 8.4,
+# so `composer` and the php84-* extensions resolve against the same PHP runtime.
+# 3.23 = FROM alpine:3.23 (ships php84 and an unversioned /usr/bin/php -> php84).
+# Do NOT use 3.24: alpine:3.24 defaults to php85, so its `composer` runs on php85 and
+# fails against the php84-* extensions installed below.
+#
+# Requires erseco/alpine-php-webserver 3.23.x with
+# https://github.com/erseco/alpine-php-webserver/pull/89 (PHP iconv linked to
+# modern GNU libiconv; first good rebuild: 3.23.4-1). That enables
+# //TRANSLIT//IGNORE on Alpine/musl and replaces the previous LD_PRELOAD +
+# gnu-libiconv 1.15-r3 workaround for https://github.com/erseco/alpine-moodle/issues/26.
+# Pin major.minor so we track the latest 3.23.x rebuild (3.23.4-1, 3.23.5, …).
+ARG PHP_WEBSERVER_VERSION=3.23
 FROM ${ARCH}erseco/alpine-php-webserver:${PHP_WEBSERVER_VERSION}
 
 LABEL maintainer="Ernesto Serrano <info@ernesto.es>"
 
 USER root
-RUN apk add --no-cache composer patch rsync php83-posix php83-xmlwriter php83-pecl-redis \
-    php83-ldap php83-pecl-igbinary php83-exif php83-sqlite3 php83-pdo_sqlite \
-    # php83-zip provides ZipArchive, used by the Moodle blueprint runner for
+RUN apk add --no-cache composer patch rsync php84-posix php84-xmlwriter php84-pecl-redis \
+    php84-ldap php84-pecl-igbinary php84-exif php84-sqlite3 php84-pdo_sqlite \
+    # php84-zip provides ZipArchive, used by the Moodle blueprint runner for
     # safe bundle/plugin extraction.
-    php83-zip \
+    php84-zip \
     # Remove alpine cache
     && rm -rf /var/cache/apk/* \
     # Immutable Moodle source tree used by 010-sync-moodle-code.sh to refresh
@@ -27,11 +34,11 @@ USER nobody
 
 # Moodle version configuration
 ARG MOODLE_VERSION=main
-# Exact moodle/moodle commit for the download below. CI (build.yml) resolves
-# it from MOODLE_VERSION with git ls-remote, so the download layer's cache key
-# changes whenever upstream moves — without it, BuildKit reused a months-old
-# cached "main" snapshot in every :main/:beta image (#161). Optional for local
-# builds: when empty, the ref name is downloaded directly.
+# Exact moodle/moodle commit for the download below. CI (build-php84.yml)
+# resolves it from MOODLE_VERSION with git ls-remote, so the download layer's
+# cache key changes whenever upstream moves — without it, BuildKit reused a
+# months-old cached "main" snapshot (#161). Optional for local builds: when
+# empty, the ref name is downloaded directly.
 ARG MOODLE_COMMIT=
 
 # Set default environment variables
