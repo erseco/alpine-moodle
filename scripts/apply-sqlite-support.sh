@@ -68,11 +68,29 @@ fi
 # release's environment.xml also carries newer version stubs, so the highest
 # block is NOT the installed version (e.g. 4.5.12 declares blocks up to 5.2).
 #
-# For "main" the patch already declares sqlite in the newest (dev) block, so
-# there is nothing to normalise.
+# For "main" the block is resolved from the tree's $branch (e.g. '503' →
+# "5.3"): the patch only declares sqlite in the block that was newest when
+# its diff was written, so after a weekly dev-branch bump (5.2 → 5.3dev on
+# 2026-07-28) the tree's newest block predates the patch and the CLI
+# installer fails with "Error reading environment data".
 case "$MOODLE_VERSION" in
   v*) target="$(echo "$MOODLE_VERSION" | sed -E 's/^v([0-9]+\.[0-9]+).*/\1/')" ;;
-  *)  target="" ;;
+  *)
+    target=""
+    for vphp in "$DIR/version.php" "$DIR/public/version.php"; do
+      [ -f "$vphp" ] || continue
+      branch="$(awk -F"'" '/^\$branch/ {print $2; exit}' "$vphp")"
+      case "$branch" in
+        [0-9][0-9][0-9])
+          major="${branch%??}"
+          minor="${branch#"$major"}"
+          minor="${minor#0}"
+          target="${major}.${minor}"
+          ;;
+      esac
+      break
+    done
+    ;;
 esac
 
 if [ -n "$target" ]; then
