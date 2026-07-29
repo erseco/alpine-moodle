@@ -86,4 +86,34 @@ if ! dc exec -T app sh /tmp/run_tests.sh sync; then
   exit 1
 fi
 
+# 4) Boot-after-sync regression (#161): restart the app so the whole
+#    entrypoint (02-configure-moodle.sh included) re-runs against the synced
+#    tree. A sync that deletes anything the boot needs (helper CLI scripts,
+#    theme config.php files, …) only explodes on the NEXT boot — exactly what
+#    hit real deployments — so that boot must be part of CI.
+echo ">> Restarting app to verify the synced tree boots cleanly..."
+if ! dc restart app; then
+  echo "ERROR: 'docker compose restart app' failed after the code sync (${FILE})."
+  dump_logs
+  exit 1
+fi
+
+echo ">> Re-running the HTTP web check after the restart..."
+if ! dc run --rm --no-deps sut; then
+  echo "ERROR: HTTP web check failed after the post-sync restart (Moodle ${MOODLE_VERSION}, ${FILE})."
+  dump_logs
+  exit 1
+fi
+
+# The install-state helper must positively report "installed" (exit 2) when
+# run against the synced tree — not "cannot tell", which aborts the boot.
+echo ">> Verifying the image-resident isinstalled helper against the synced tree..."
+rc=0
+dc exec -T app php /usr/local/lib/alpine-moodle/cli/isinstalled.php || rc=$?
+if [ "${rc}" != "2" ]; then
+  echo "ERROR: isinstalled.php should exit 2 (installed) but exited ${rc} (${FILE})."
+  dump_logs
+  exit 1
+fi
+
 echo ">> All checks passed for Moodle ${MOODLE_VERSION} (${FILE})."
