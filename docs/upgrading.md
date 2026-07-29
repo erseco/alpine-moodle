@@ -30,11 +30,13 @@ This covers **database schema** upgrades. Replacing the Moodle **PHP code** is h
 
     On start, if the volume's Moodle `$version` differs from the image, the container:
 
-    1. Preserves `config.php` and any `EXTRA_PLUGIN_PATHS`
+    1. Preserves `config.php`, third-party plugins (any directory with a `version.php` the image does not ship — `SYNC_PRESERVE_PLUGINS=true`, default) and any `EXTRA_PLUGIN_PATHS`
     2. Rsyncs `/usr/src/moodle/` → `/var/www/html/` (`--delete` removes leftover core files)
-    3. Restores the preserved paths
+    3. Restores the preserved paths — relocating them into `public/` when upgrading across the Moodle 5.1 layout change
     4. Writes `.alpine-moodle-release`
     5. Continues with the usual `AUTO_UPDATE_MOODLE` / `upgrade.php` flow
+
+    This mirrors [Moodle's official upgrade procedure](https://docs.moodle.org/en/Upgrading): replace the code, keep `config.php`, carry custom plugins over, then run the upgrade. Moodle itself decides afterwards whether each carried-over plugin needs a DB upgrade or is incompatible.
 
     Operator steps:
 
@@ -57,7 +59,7 @@ This covers **database schema** upgrades. Replacing the Moodle **PHP code** is h
 
         Look for a log line like `Moodle code sync: 2025041401.00 → 2025041402.00`.
 
-    Custom plugins that live only on the volume should either be listed in `EXTRA_PLUGIN_PATHS` (e.g. `mod/attendance theme/space`) or reinstalled declaratively via `PLUGINS` / Moosh after each sync.
+    Third-party plugins that live only on the volume are kept automatically (`SYNC_PRESERVE_PLUGINS=true`, default). Custom paths **without** a `version.php` should either be listed in `EXTRA_PLUGIN_PATHS` or reinstalled declaratively via `PLUGINS` / Moosh after each sync. Set `SYNC_PRESERVE_PLUGINS=false` if you want the sync to produce a pristine image tree instead (third-party plugin code is then deleted).
 
     To keep today's "volume always wins" behaviour (no automatic core refresh):
 
@@ -89,7 +91,7 @@ This covers **database schema** upgrades. Replacing the Moodle **PHP code** is h
     ```
 
 !!! warning "Always back up first"
-    Take a database dump and a tarball of `moodledata` before major upgrades. Code sync replaces files under `/var/www/html` (except `config.php` and `EXTRA_PLUGIN_PATHS`).
+    Take a database dump and a tarball of `moodledata` before major upgrades. Code sync replaces files under `/var/www/html` (except `config.php`, preserved third-party plugins and `EXTRA_PLUGIN_PATHS`).
 
 ## Upgrading from Moodle < 5.1 to ≥ 5.1
 

@@ -17,6 +17,13 @@ fi
 # Path to the config.php file
 config_file="/var/www/html/config.php"
 
+# Image-resident helper CLI scripts. They live OUTSIDE /var/www/html on
+# purpose: the html tree is usually a volume, and the code sync
+# (010-sync-moodle-code.sh) mirrors the pristine Moodle source over it, so
+# anything the image drops inside the tree would be deleted on the next sync
+# (#161). Do not move these back into the Moodle tree.
+alpine_moodle_cli="/usr/local/lib/alpine-moodle/cli"
+
 # Allow MOODLE_DATABASE_TYPE to override the legacy DB_TYPE variable.
 if [ -n "${MOODLE_DATABASE_TYPE:-}" ]; then
     echo "Using MOODLE_DATABASE_TYPE=${MOODLE_DATABASE_TYPE} (DB_TYPE=${DB_TYPE})."
@@ -382,15 +389,25 @@ fi
 # Upgrade config.php file
 upgrade_config_file
 
-# Check if the database is already installed
-if php -d max_input_vars=10000 /var/www/html/admin/cli/isinstalled.php ; then
+# Check if the database is already installed.
+# isinstalled.php exit codes: 0 = not installed, 2 = installed, anything else
+# means the check itself failed and we must NOT guess (a missing helper used
+# to be silently treated as "installed", masking a broken image/volume, #161).
+set +e
+php -d max_input_vars=10000 "$alpine_moodle_cli/isinstalled.php"
+isinstalled_rc=$?
+set -e
+
+case "$isinstalled_rc" in
+0)
     install_database
     configure_moodle_settings
     final_configurations
-else
+    ;;
+2)
     configure_moodle_settings
     echo "Upgrading admin user"
-    php -d max_input_vars=10000 /var/www/html/admin/cli/update_admin_user.php --username=$MOODLE_USERNAME --password=$MOODLE_PASSWORD --email=$MOODLE_EMAIL
+    php -d max_input_vars=10000 "$alpine_moodle_cli/update_admin_user.php" --username=$MOODLE_USERNAME --password=$MOODLE_PASSWORD --email=$MOODLE_EMAIL
     if [ -z "$AUTO_UPDATE_MOODLE" ] || [ "$AUTO_UPDATE_MOODLE" = true ]; then
 
         upgrade_moodle
@@ -399,12 +416,19 @@ else
     else
         echo "Skipped auto update of Moodle"
     fi
-fi
+    ;;
+*)
+    echo "ERROR: could not determine whether Moodle is installed" >&2
+    echo "       ($alpine_moodle_cli/isinstalled.php exited with $isinstalled_rc)." >&2
+    echo "       Check the database connectivity and the messages above." >&2
+    exit 1
+    ;;
+esac
 
 # Check if REDIS_HOST is set and not empty
 if [ -n "$REDIS_HOST" ]; then
     echo "Configuring redis cache..."
-    php -d max_input_vars=10000 /var/www/html/admin/cli/configure_redis.php "${REDIS_HOST}" "${REDIS_PASSWORD}" "${REDIS_USER}"
+    php -d max_input_vars=10000 "$alpine_moodle_cli/configure_redis.php" "${REDIS_HOST}" "${REDIS_PASSWORD}" "${REDIS_USER}"
 fi
 
 # Execute post-install commands if the variable is set

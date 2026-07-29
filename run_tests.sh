@@ -16,10 +16,11 @@ set -eu
 #     the 5.1+ public/ layout).
 #
 #   MODE=sync
-#     Moodle-context regression test for 010-sync-moodle-code.sh (#103). Must
-#     run INSIDE the `app` container. Simulates a stale moodlehtml volume
-#     (old stamp + leftover core file + custom plugin), re-runs the sync
-#     script, and asserts config/plugin preservation + core refresh.
+#     Moodle-context regression test for 010-sync-moodle-code.sh (#103, #161).
+#     Must run INSIDE the `app` container. Simulates a stale moodlehtml volume
+#     (old stamp + leftover core file + custom plugin + third-party plugin +
+#     stale in-tree helper scripts), re-runs the sync script, and asserts
+#     config/plugin preservation, core refresh and image-resident helpers.
 MODE="${1:-all}"
 
 # --------------------------------------------------------------------------
@@ -116,19 +117,39 @@ run_sync_smoke_test() {
   fi
   echo "Image Moodle \$version: ${image_ver} (from ${src_version_php})"
 
+  # Layout-aware plugin root: Moodle 5.1+ keeps plugins under public/, and the
+  # sync relocates preserved plugins into the image layout, so the fixtures
+  # must live where the image expects them.
+  plugroot="local"
+  if [ -d "${src}/public" ]; then
+    plugroot="public/local"
+  fi
+  cli="/usr/local/lib/alpine-moodle/cli"
+
   # Snapshot config.php so we can prove it survives the sync.
   config_before="$(cksum < "${html}/config.php")"
 
-  # Simulate a stale volume: old stamp, a leftover core file, and a "custom" plugin.
+  # Simulate a stale volume: old stamp, a leftover core file, a "custom"
+  # plugin, an auto-preservable third-party plugin (NOT in
+  # EXTRA_PLUGIN_PATHS), and the helper scripts that pre-#161 images shipped
+  # inside the tree (the sync must remove them; the image-resident copies at
+  # ${cli} are the ones that matter now).
   printf '0.00\n' > "$stamp"
   printf 'stale-core-from-old-image\n' > "${html}/STALE_CORE_FILE_FROM_OLD_IMAGE"
-  mkdir -p "${html}/local/syncsmoke"
-  printf '<?php // custom plugin marker for sync test\n' > "${html}/local/syncsmoke/version.php"
-  custom_before="$(cksum < "${html}/local/syncsmoke/version.php")"
+  mkdir -p "${html}/${plugroot}/syncsmoke"
+  printf '<?php // custom plugin marker for sync test\n' > "${html}/${plugroot}/syncsmoke/version.php"
+  custom_before="$(cksum < "${html}/${plugroot}/syncsmoke/version.php")"
+  mkdir -p "${html}/${plugroot}/autosmoke"
+  printf '<?php // auto-preserved third-party plugin marker\n' > "${html}/${plugroot}/autosmoke/version.php"
+  # Third-party plugins carry their own config.php (every theme does): it must
+  # be preserved with the plugin, not used to freeze core config.php files.
+  printf '<?php // third-party plugin config\n' > "${html}/${plugroot}/autosmoke/config.php"
+  mkdir -p "${html}/admin/cli"
+  printf '<?php // stale helper copy from a pre-#161 image\n' > "${html}/admin/cli/update_admin_user.php"
 
-  echo "Re-running sync script with SYNC_MOODLE_CODE=auto and EXTRA_PLUGIN_PATHS=local/syncsmoke..."
+  echo "Re-running sync script with SYNC_MOODLE_CODE=auto and EXTRA_PLUGIN_PATHS=${plugroot}/syncsmoke..."
   SYNC_MOODLE_CODE=auto \
-  EXTRA_PLUGIN_PATHS="local/syncsmoke" \
+  EXTRA_PLUGIN_PATHS="${plugroot}/syncsmoke" \
   sh "$script"
 
   stamp_after="$(tr -d '[:space:]' < "$stamp")"
@@ -151,20 +172,45 @@ run_sync_smoke_test() {
   fi
   echo "config.php preserved."
 
-  if [ ! -f "${html}/local/syncsmoke/version.php" ]; then
+  if [ ! -f "${html}/${plugroot}/syncsmoke/version.php" ]; then
     echo "ERROR: EXTRA_PLUGIN_PATHS custom plugin was not restored"
     exit 1
   fi
-  custom_after="$(cksum < "${html}/local/syncsmoke/version.php")"
+  custom_after="$(cksum < "${html}/${plugroot}/syncsmoke/version.php")"
   if [ "$custom_before" != "$custom_after" ]; then
     echo "ERROR: custom plugin content changed during sync"
     exit 1
   fi
-  echo "Custom plugin local/syncsmoke preserved."
+  echo "Custom plugin ${plugroot}/syncsmoke preserved."
+
+  # Third-party plugin with a version.php must survive WITHOUT being listed in
+  # EXTRA_PLUGIN_PATHS — and keep its own config.php (the remui regression:
+  # unanchored excludes used to leave a config.php-only skeleton behind).
+  if [ ! -f "${html}/${plugroot}/autosmoke/version.php" ] || [ ! -f "${html}/${plugroot}/autosmoke/config.php" ]; then
+    echo "ERROR: third-party plugin ${plugroot}/autosmoke was not auto-preserved intact"
+    exit 1
+  fi
+  echo "Third-party plugin ${plugroot}/autosmoke auto-preserved."
+
+  # Helper scripts from pre-#161 images lived inside the tree; the sync must
+  # remove the stale copies (the image-resident ones under ${cli} take over).
+  if [ -e "${html}/admin/cli/update_admin_user.php" ]; then
+    echo "ERROR: stale in-tree helper admin/cli/update_admin_user.php survived the sync"
+    exit 1
+  fi
+  echo "Stale in-tree helper copies removed."
+
+  for helper in isinstalled update_admin_user configure_redis enrol; do
+    if [ ! -f "${cli}/${helper}.php" ]; then
+      echo "ERROR: image-resident helper ${cli}/${helper}.php is missing"
+      exit 1
+    fi
+  done
+  echo "Image-resident helpers present under ${cli}."
 
   # Second run with matching stamp must be a no-op (leave a local marker alone).
   printf 'local-marker\n' > "${html}/SYNC_NOOP_MARKER"
-  SYNC_MOODLE_CODE=auto EXTRA_PLUGIN_PATHS="local/syncsmoke" sh "$script"
+  SYNC_MOODLE_CODE=auto EXTRA_PLUGIN_PATHS="${plugroot}/syncsmoke" sh "$script"
   if [ ! -f "${html}/SYNC_NOOP_MARKER" ]; then
     echo "ERROR: second auto sync with matching versions wiped a local marker (should no-op)"
     exit 1
@@ -173,7 +219,7 @@ run_sync_smoke_test() {
 
   # Cleanup test artefacts so they don't pollute the running site.
   rm -f "${html}/SYNC_NOOP_MARKER"
-  rm -rf "${html}/local/syncsmoke"
+  rm -rf "${html}/${plugroot}/syncsmoke" "${html}/${plugroot}/autosmoke"
 
   echo "Moodle code sync smoke test passed."
 }

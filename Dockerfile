@@ -71,6 +71,10 @@ ENV LANG=en_US.UTF-8 \
     # $version differs from the image (or the tree is empty). always/never
     # override. See docs/upgrading.md and #103.
     SYNC_MOODLE_CODE=auto \
+    # true: the code sync keeps third-party plugins (any directory with a
+    # version.php that the image tree does not ship) instead of deleting
+    # them, matching Moodle's own upgrade procedure. See #161.
+    SYNC_PRESERVE_PLUGINS=true \
     EXTRA_PLUGIN_PATHS= \
     DEBUG=false \
     client_max_body_size=50M \
