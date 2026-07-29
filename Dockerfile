@@ -27,6 +27,12 @@ USER nobody
 
 # Moodle version configuration
 ARG MOODLE_VERSION=main
+# Exact moodle/moodle commit for the download below. CI (build.yml) resolves
+# it from MOODLE_VERSION with git ls-remote, so the download layer's cache key
+# changes whenever upstream moves — without it, BuildKit reused a months-old
+# cached "main" snapshot in every :main/:beta image (#161). Optional for local
+# builds: when empty, the ref name is downloaded directly.
+ARG MOODLE_COMMIT=
 
 # Set default environment variables
 ENV LANG=en_US.UTF-8 \
@@ -80,16 +86,23 @@ ENV LANG=en_US.UTF-8 \
 # Example:
 # MOODLE_VERSION=v4.5.3
 #
+# MOODLE_COMMIT (optional) pins the exact commit to download; when set it
+# takes precedence over MOODLE_VERSION for the URL.
+#
 # Download and extract Moodle into the immutable source tree, then seed the
 # runtime document root. Runtime upgrades of a persistent moodlehtml volume are
 # handled by rootfs/docker-entrypoint-init.d/010-sync-moodle-code.sh.
-RUN if [ "$MOODLE_VERSION" = "main" ]; then \
-      MOODLE_URL="https://github.com/moodle/moodle/archive/main.tar.gz"; \
+RUN if [ -n "$MOODLE_COMMIT" ]; then \
+      MOODLE_URL="https://github.com/moodle/moodle/archive/${MOODLE_COMMIT}.tar.gz"; \
+    elif [ "$MOODLE_VERSION" = "main" ]; then \
+      MOODLE_URL="https://github.com/moodle/moodle/archive/refs/heads/main.tar.gz"; \
     else \
-      MOODLE_URL="https://github.com/moodle/moodle/tarball/refs/tags/${MOODLE_VERSION}"; \
+      MOODLE_URL="https://github.com/moodle/moodle/archive/refs/tags/${MOODLE_VERSION}.tar.gz"; \
     fi && \
-    echo "Downloading Moodle from: $MOODLE_URL" && \
-    curl -L "$MOODLE_URL" | tar xz --strip-components=1 -C /usr/src/moodle
+    echo "Downloading Moodle ${MOODLE_VERSION}${MOODLE_COMMIT:+ (commit ${MOODLE_COMMIT})} from: $MOODLE_URL" && \
+    curl -fsSL "$MOODLE_URL" -o /tmp/moodle.tar.gz && \
+    tar xzf /tmp/moodle.tar.gz --strip-components=1 -C /usr/src/moodle && \
+    rm -f /tmp/moodle.tar.gz
 
 # Apply experimental SQLite support (MDL-88218). The heavy lifting — selecting
 # the right ateeducacion/moodle patch per branch (PR #1 main, #5 5.2, #2 5.1,

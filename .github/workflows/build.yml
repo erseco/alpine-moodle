@@ -81,26 +81,49 @@ jobs:
           sarif_file: hadolint-results.sarif
           category: hadolint-dockerfile
 
-      # Step 7: Determine Moodle version
+      # Step 7: Determine Moodle version and resolve the exact upstream commit.
+      # Passing the commit as MOODLE_COMMIT keys the Docker download layer to
+      # upstream's HEAD, so a stale BuildKit cache can never freeze the Moodle
+      # code shipped in :main/:beta again (#161). Resolving it here also fails
+      # the build early when a tag does not exist in moodle/moodle.
       - name: Determine Moodle version
         id: moodle_version
         run: |
           if [[ $GITHUB_REF == refs/tags/* ]]; then
             VERSION=${GITHUB_REF#refs/tags/}
-            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            REF="refs/tags/${VERSION}"
           else
-            echo "version=main" >> $GITHUB_OUTPUT
+            VERSION=main
+            REF="refs/heads/main"
           fi
+          # tail -1: for annotated tags the peeled ^{} line (the commit) sorts last.
+          COMMIT=$(git ls-remote https://github.com/moodle/moodle.git "$REF" "${REF}^{}" | tail -n 1 | cut -f1)
+          if [[ -z "$COMMIT" ]]; then
+            echo "ERROR: ${REF} not found in moodle/moodle — refusing to build" >&2
+            exit 1
+          fi
+          echo "Resolved ${VERSION} -> ${COMMIT}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "commit=${COMMIT}" >> $GITHUB_OUTPUT
 
-      # Fast, docker-free coverage of 010-sync-moodle-code.sh (#103).
-      - name: Unit test (Moodle code sync)
-        run: ./tests/unit/test-sync-moodle-code.sh
+      # Fast, docker-free coverage of the shell helpers (#103, #161).
+      - name: Unit tests (shell scripts)
+        run: |
+          for t in tests/unit/*.sh; do
+            echo "== ${t}"
+            "$t"
+          done
 
-      # Step 8: Test build (for PRs)
+      # Step 8: Test build (for PRs). Passes the same version/commit args as
+      # the release build so the MOODLE_COMMIT download path is exercised
+      # before merging.
       - name: Debug Build on PR
         if: github.event_name == 'pull_request'
         run: |
-          docker buildx build --load .
+          docker buildx build --load \
+            --build-arg MOODLE_VERSION=${{ steps.moodle_version.outputs.version }} \
+            --build-arg MOODLE_COMMIT=${{ steps.moodle_version.outputs.commit }} \
+            .
 
       # Steps 9x: Functional tests (HTTP web check + Moodle-context moosh smoke
       # + code-sync regression) via the shared orchestrator tests/compose-test.sh.
@@ -119,7 +142,20 @@ jobs:
         if: github.event_name != 'pull_request'
         run: ./tests/compose-test.sh docker-compose.test.sqlite.yml
 
-      # Step 10: Build and Push to both registries in a single step
+      # Step 10: Release gate (#161). Build the amd64 image locally and assert
+      # the Moodle code inside actually matches the tag being built BEFORE
+      # anything is pushed. The multi-arch push below reuses these layers from
+      # the builder's local cache, so this costs almost nothing.
+      - name: Verify image Moodle version
+        if: github.event_name != 'pull_request'
+        run: |
+          docker buildx build --load \
+            --build-arg MOODLE_VERSION=${{ steps.moodle_version.outputs.version }} \
+            --build-arg MOODLE_COMMIT=${{ steps.moodle_version.outputs.commit }} \
+            -t alpine-moodle:verify .
+          ./tests/verify-moodle-version.sh alpine-moodle:verify "${{ steps.moodle_version.outputs.version }}"
+
+      # Step 11: Build and Push to both registries in a single step
       - name: Build and push
         if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v7
@@ -130,20 +166,24 @@ jobs:
           platforms: linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/386,linux/ppc64le,linux/s390x
           build-args: |
             MOODLE_VERSION=${{ steps.moodle_version.outputs.version }}
+            MOODLE_COMMIT=${{ steps.moodle_version.outputs.commit }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Step 11: Run Trivy vulnerability scanner
+      # Step 12: Run Trivy vulnerability scanner. The docker tag pushed above
+      # always matches the version output (vX.Y.Z for tag builds, main for
+      # main-branch builds); the previous tags[0] expression silently
+      # resolved to 'main' on every build.
       - name: Run Trivy vulnerability scanner
         if: github.event_name != 'pull_request'
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ghcr.io/${{ github.repository }}:${{ steps.meta.outputs.tags && steps.meta.outputs.tags[0] || 'main' }}
+          image-ref: ghcr.io/${{ github.repository }}:${{ steps.moodle_version.outputs.version }}
           format: 'table'
           exit-code: '0'
           severity: 'CRITICAL,HIGH'
 
-      # Step 12: Update Docker Hub Description
+      # Step 13: Update Docker Hub Description
       - name: Docker Hub Description
         if: startsWith(github.ref, 'refs/tags/')
         uses: peter-evans/dockerhub-description@v5
