@@ -171,6 +171,22 @@ docker compose up -d
 
 See [Upgrading](upgrading.md) for the full procedure.
 
+## Site shows an older Moodle version than the image tag
+
+**Symptom**: You pull e.g. `erseco/alpine-moodle:v5.2.1` but the footer / `admin/environment.php` reports an older release (even a `X.Ydev` build), and plugins requiring the newer `$version` refuse to install. Related: [#161](https://github.com/erseco/alpine-moodle/issues/161).
+
+**Cause**: Docker seeds a named `moodlehtml` volume from the image only on **first** use. Afterwards the volume's old PHP tree shadows whatever newer image you pull, and `AUTO_UPDATE_MOODLE` alone never replaces code. Images built before the version-aware code sync landed (July 2026) cannot self-heal this.
+
+**Fix**: Pull the current image for your tag (all release tags have been rebuilt with `SYNC_MOODLE_CODE` support) and recreate the container:
+
+```bash
+docker compose pull
+docker compose up -d --force-recreate
+docker compose logs moodle | grep 'Moodle code sync'
+```
+
+The sync keeps `config.php` and any `EXTRA_PLUGIN_PATHS` entries, refreshes core to the image's release, and then the DB upgrade runs as usual.
+
 ## LDAP says the PHP module is missing
 
 **Cause**: Old image tag. `php-ldap` is bundled in current releases. Related: [#122](https://github.com/erseco/alpine-moodle/issues/122).
