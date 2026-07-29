@@ -77,7 +77,7 @@ services:
       # REDIS_USER: moodle
 ```
 
-On start the container runs `admin/cli/configure_redis.php` and writes the Redis session handler into `config.php`. Unset `REDIS_HOST` to go back to file sessions.
+On start the container runs the image-resident helper `configure_redis.php` and writes the Redis session handler into `config.php`. Unset `REDIS_HOST` to go back to file sessions.
 
 !!! note
     `REDIS_USER` requires Redis 6+ ACLs *and* `REDIS_PASSWORD`. The container fails fast if you set a user without a password.
@@ -145,7 +145,7 @@ environment:
 
 ## Code sync for persistent `/var/www/html`
 
-When you mount a `moodlehtml` volume, core PHP is still upgradeable by changing the image tag. On start, `SYNC_MOODLE_CODE=auto` (default) may rsync `/usr/src/moodle` → `/var/www/html` if Moodle `$version` differs. `config.php` is always kept; list extra paths in `EXTRA_PLUGIN_PATHS`.
+When you mount a `moodlehtml` volume, core PHP is still upgradeable by changing the image tag. On start, `SYNC_MOODLE_CODE=auto` (default) may rsync `/usr/src/moodle` → `/var/www/html` if Moodle `$version` differs. `config.php` is always kept, third-party plugins are preserved automatically (`SYNC_PRESERVE_PLUGINS=true`, default); list extra non-plugin paths in `EXTRA_PLUGIN_PATHS`.
 
 ```yaml
 environment:

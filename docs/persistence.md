@@ -39,7 +39,7 @@ volumes:
 
 Mounting `/var/www/html` as a named volume preserves `config.php` and any custom plugin/theme files you keep there. Historically the cost was that **changing the image tag alone did not refresh Moodle core**, because the volume kept the old tree ([#102](https://github.com/erseco/alpine-moodle/issues/102), [#103](https://github.com/erseco/alpine-moodle/issues/103)).
 
-Current images ship **version-aware code sync** (`SYNC_MOODLE_CODE=auto` by default): on start, if the volume's Moodle `$version` differs from the image, the container rsyncs the immutable tree at `/usr/src/moodle` into `/var/www/html`, preserves `config.php`, restores any paths listed in `EXTRA_PLUGIN_PATHS`, then runs the usual `upgrade.php` flow.
+Current images ship **version-aware code sync** (`SYNC_MOODLE_CODE=auto` by default): on start, if the volume's Moodle `$version` differs from the image, the container rsyncs the immutable tree at `/usr/src/moodle` into `/var/www/html`, preserves `config.php`, keeps third-party plugins automatically (`SYNC_PRESERVE_PLUGINS=true`, default), restores any paths listed in `EXTRA_PLUGIN_PATHS`, then runs the usual `upgrade.php` flow.
 
 You still have three patterns:
 

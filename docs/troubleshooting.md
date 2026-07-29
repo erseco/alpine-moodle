@@ -132,7 +132,7 @@ For bind mounts only. Named Docker volumes get the right ownership automatically
 
 ## Plugins disappear after upgrading
 
-**Cause**: Either the `moodlehtml` volume was wiped, or a code sync (`SYNC_MOODLE_CODE=auto`) replaced core and a custom plugin path was **not** listed in `EXTRA_PLUGIN_PATHS` / reinstalled via `PLUGINS` or Moosh. Related: [#9](https://github.com/erseco/alpine-moodle/issues/9), [#103](https://github.com/erseco/alpine-moodle/issues/103).
+**Cause**: Either the `moodlehtml` volume was wiped, or an old image's code sync deleted plugin code. Current images keep third-party plugins across syncs automatically (`SYNC_PRESERVE_PLUGINS=true`, default): anything with a `version.php` the image does not ship is carried over. Plugins can now only be lost if you set `SYNC_PRESERVE_PLUGINS=false` or the path has no `version.php` and is not in `EXTRA_PLUGIN_PATHS`. Related: [#9](https://github.com/erseco/alpine-moodle/issues/9), [#103](https://github.com/erseco/alpine-moodle/issues/103), [#161](https://github.com/erseco/alpine-moodle/issues/161).
 
 **Fix** — prefer declarative reinstall so plugins survive every boot:
 
@@ -185,7 +185,28 @@ docker compose up -d --force-recreate
 docker compose logs moodle | grep 'Moodle code sync'
 ```
 
-The sync keeps `config.php` and any `EXTRA_PLUGIN_PATHS` entries, refreshes core to the image's release, and then the DB upgrade runs as usual.
+The sync keeps `config.php`, third-party plugins and any `EXTRA_PLUGIN_PATHS` entries, refreshes core to the image's release, and then the DB upgrade runs as usual.
+
+## Container fails to start after a code sync: "Could not open input file: …/admin/cli/update_admin_user.php"
+
+**Symptom**: After pulling a release tag rebuilt on **2026-07-29 (morning, CEST)** onto an older `moodlehtml` volume, the code sync runs and then the boot aborts with:
+
+```
+Could not open input file: /var/www/html/admin/cli/isinstalled.php
+...
+Could not open input file: /var/www/html/admin/cli/update_admin_user.php
+```
+
+**Cause**: Those first rebuilt images shipped their helper CLI scripts *inside* the Moodle tree, and the code sync itself deleted them (they are not part of the pristine Moodle source it mirrors). The same builds could also leave a third-party plugin half-deleted (only its `config.php` remaining) because of an unanchored rsync exclude. Related: [#161](https://github.com/erseco/alpine-moodle/issues/161).
+
+**Fix**: Pull the tag again — republished images keep the helpers in the image itself (`/usr/local/lib/alpine-moodle/cli/`), where no sync can touch them — and recreate the container:
+
+```bash
+docker compose pull
+docker compose up -d --force-recreate
+```
+
+If a third-party plugin was left half-deleted by the broken build (its directory only contains `config.php`), remove that directory from the volume and reinstall the plugin from a fresh download afterwards.
 
 ## LDAP says the PHP module is missing
 

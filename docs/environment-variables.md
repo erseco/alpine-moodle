@@ -21,7 +21,7 @@ Every setting exposed by `erseco/alpine-moodle`. Defaults come from the `Dockerf
 | `MOODLE_EMAIL`     | `user@example.com`| Admin email address. |
 
 !!! warning
-    If the container finds an existing install, these values are re-applied to the admin user on every start via `admin/cli/update_admin_user.php`. Keep them in sync with your secret store.
+    If the container finds an existing install, these values are re-applied to the admin user on every start via the image-resident helper `/usr/local/lib/alpine-moodle/cli/update_admin_user.php`. Keep them in sync with your secret store.
 
 ## Database — primary
 
@@ -94,7 +94,11 @@ See [Reverse Proxy](reverse-proxy.md) for concrete examples.
 |--------------------------|---------|-------------|
 | `AUTO_UPDATE_MOODLE`     | `true`  | If `false`, skip the automatic `admin/cli/upgrade.php` on container start. |
 | `SYNC_MOODLE_CODE`       | `auto`  | How to refresh Moodle **PHP code** from the image into `/var/www/html` when a volume is used. **This is independent of `AUTO_UPDATE_MOODLE`** (DB schema). Values: `auto` (default) — sync when the volume is empty or its Moodle `$version` differs from the image; `always` — rsync every start; `never` — leave the volume tree untouched (legacy). See [Upgrading](upgrading.md) and [#103](https://github.com/erseco/alpine-moodle/issues/103). |
-| `EXTRA_PLUGIN_PATHS`     | *(empty)* | Space-separated paths **relative** to `/var/www/html` preserved across a code sync (e.g. `mod/attendance theme/space local/mytool`). Rejects absolute paths and `..`. Prefer `PLUGINS` / Moosh when you can reinstall declaratively. |
+| `SYNC_PRESERVE_PLUGINS`  | `true`  | When `true`, the code sync automatically keeps **third-party plugins** — any directory containing a `version.php` that the image tree does not ship — matching Moodle's own upgrade procedure of carrying custom plugins over to the new code tree. Set to `false` to get a pristine image tree on every sync (third-party plugin code is then **deleted** unless listed in `EXTRA_PLUGIN_PATHS`). See [#161](https://github.com/erseco/alpine-moodle/issues/161). |
+| `EXTRA_PLUGIN_PATHS`     | *(empty)* | Space-separated paths **relative** to `/var/www/html` preserved across a code sync (e.g. `mod/attendance theme/space local/mytool`). Rejects absolute paths and `..`. With `SYNC_PRESERVE_PLUGINS=true` (default) real plugins are kept automatically; this is mainly for custom paths **without** a `version.php`. Prefer `PLUGINS` / Moosh when you can reinstall declaratively. |
+
+!!! note
+    When the image and the volume use different layouts (Moodle 5.1 moved the web root under `public/`), preserved paths are relocated automatically, e.g. `mod/attendance` → `public/mod/attendance`.
 
 ### Code sync vs database upgrade
 

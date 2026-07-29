@@ -16,7 +16,7 @@ No. Moodle does not support subpath deployment without patching. Use a subdomain
 
 ## How do I change the admin password after installation?
 
-The container re-applies `MOODLE_USERNAME` / `MOODLE_PASSWORD` on every start via `admin/cli/update_admin_user.php`. Change the environment variable and restart:
+The container re-applies `MOODLE_USERNAME` / `MOODLE_PASSWORD` on every start via the image-resident helper `/usr/local/lib/alpine-moodle/cli/update_admin_user.php`. Change the environment variable and restart:
 
 ```bash
 docker compose up -d --force-recreate moodle
@@ -54,7 +54,7 @@ Yes — set `AUTO_UPDATE_MOODLE=false`. The container will start without running
 
 ## Why didn't changing the image tag upgrade my site?
 
-`AUTO_UPDATE_MOODLE` only runs the **database** upgrade. If `/var/www/html` is a named volume, older images left the PHP tree pinned on the volume ([#102](https://github.com/erseco/alpine-moodle/issues/102)). Current images run a **code sync** first (`SYNC_MOODLE_CODE=auto`): when the volume's Moodle `$version` differs from the image, core is rsynced from `/usr/src/moodle` while `config.php` (and optional `EXTRA_PLUGIN_PATHS`) are preserved, then `upgrade.php` runs. See [Upgrading](upgrading.md).
+`AUTO_UPDATE_MOODLE` only runs the **database** upgrade. If `/var/www/html` is a named volume, older images left the PHP tree pinned on the volume ([#102](https://github.com/erseco/alpine-moodle/issues/102)). Current images run a **code sync** first (`SYNC_MOODLE_CODE=auto`): when the volume's Moodle `$version` differs from the image, core is rsynced from `/usr/src/moodle` while `config.php`, third-party plugins (`SYNC_PRESERVE_PLUGINS=true`, default) and optional `EXTRA_PLUGIN_PATHS` are preserved, then `upgrade.php` runs. See [Upgrading](upgrading.md).
 
 ## Which architectures are supported?
 
