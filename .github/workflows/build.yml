@@ -129,17 +129,25 @@ jobs:
       # + code-sync regression) via the shared orchestrator tests/compose-test.sh.
       # On pull requests the dedicated moodle-matrix workflow already runs these
       # across every supported Moodle version, so here they run only on
-      # push/dispatch as a release smoke test (Moodle main, the default MOODLE_VERSION).
+      # push/dispatch as a release smoke test. They test the Moodle version
+      # actually being built (#161): a tag build must not be blocked — or,
+      # worse, greenlit — by whatever state upstream main is in that day.
       - name: Test (PostgreSQL)
         if: github.event_name != 'pull_request'
+        env:
+          MOODLE_VERSION: ${{ steps.moodle_version.outputs.version }}
         run: ./tests/compose-test.sh docker-compose.test.yml
 
       - name: Test (MariaDB)
         if: github.event_name != 'pull_request'
+        env:
+          MOODLE_VERSION: ${{ steps.moodle_version.outputs.version }}
         run: ./tests/compose-test.sh docker-compose.test.mariadb.yml
 
       - name: Test (SQLite)
         if: github.event_name != 'pull_request'
+        env:
+          MOODLE_VERSION: ${{ steps.moodle_version.outputs.version }}
         run: ./tests/compose-test.sh docker-compose.test.sqlite.yml
 
       # Step 10: Release gate (#161). Build the amd64 image locally and assert
