@@ -14,7 +14,7 @@ use MoodleBlueprint\RunContext;
  *
  * Updates go through the Moodle API (the runner is bootstrapped), which keeps
  * the password out of the process argument vector — unlike shelling out to
- * admin/cli/update_admin_user.php with --password=. The password is never
+ * the update_admin_user.php helper with --password=. The password is never
  * written to the logs.
  */
 class SetAdminAccountStep extends AbstractStep

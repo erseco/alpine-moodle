@@ -8,9 +8,10 @@ if (isset($_SERVER['REMOTE_ADDR'])) {
     exit(1);
 }
 
-// Include Moodle configuration
-$configfile = __DIR__.'/../../config.php';
-require($configfile);
+// This helper lives in the image (outside the volume-shadowed Moodle tree),
+// so it must bootstrap Moodle from the runtime document root explicitly.
+$moodleroot = getenv('MOODLE_HTML_DIR') ?: '/var/www/html';
+require($moodleroot . '/config.php');
 
 // Include CLI libraries
 require_once($CFG->libdir.'/clilib.php');
