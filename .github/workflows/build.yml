@@ -69,7 +69,7 @@ jobs:
 
       # Step 6: Lint Dockerfile
       - name: Hadolint Action
-        uses: hadolint/hadolint-action@v3.3.0
+        uses: hadolint/hadolint-action@v3.4.0
         with:
           format: sarif
           output-file: hadolint-results.sarif
