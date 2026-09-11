@@ -15,6 +15,12 @@ set -eu
 #     there. Fails if moosh cannot bootstrap Moodle (the PR #149 regression on
 #     the 5.1+ public/ layout).
 #
+#   MODE=checks
+#     Moodle-context regression test for the core_configrw and core_router
+#     status checks (#168). Must run INSIDE the `app` container. Asserts that
+#     every config.php Moodle looks at is read-only and — on 5.1+ layouts —
+#     that nginx really routes unmatched requests to public/r.php.
+#
 #   MODE=sync
 #     Moodle-context regression test for 010-sync-moodle-code.sh (#103, #161).
 #     Must run INSIDE the `app` container. Simulates a stale moodlehtml volume
@@ -223,6 +229,90 @@ run_sync_smoke_test() {
 
   echo "Moodle code sync smoke test passed."
 }
+
+# --------------------------------------------------------------------------
+# Moodle-context status-check regression test (#168)
+#
+# core_configrw: Moodle >= 5.1 checks BOTH $CFG->root/config.php and
+# $CFG->dirroot/config.php (public/config.php). The image only hardened the
+# first one, and only right after a fresh install.
+#
+# core_router (5.2+): errors out unless requests that do not resolve to a real
+# file reach public/r.php AND $CFG->routerconfigured is set.
+# --------------------------------------------------------------------------
+run_checks_smoke_test() {
+  echo "== Moodle status-check regression test (#168) =="
+
+  fail=0
+
+  # Runs as the same user as PHP-FPM, so -w is exactly what is_writable() sees.
+  for cfg in /var/www/html/config.php /var/www/html/public/config.php; do
+    [ -f "$cfg" ] || continue
+    if [ -w "$cfg" ]; then
+      echo "FAIL: $cfg is writable (mode $(stat -c %a "$cfg")); core_configrw would warn."
+      fail=1
+    else
+      echo "OK:   $cfg is read-only (mode $(stat -c %a "$cfg"))."
+    fi
+  done
+
+  if [ -f /var/www/html/public/r.php ]; then
+    if grep -q 'try_files $uri $uri/ /r.php' /etc/nginx/nginx.conf &&
+       grep -q 'try_files $fastcgi_script_name' /etc/nginx/nginx.conf; then
+      echo "OK:   nginx falls back to r.php for missing files and missing .php scripts."
+    else
+      echo "FAIL: nginx does not route unmatched requests to r.php."
+      fail=1
+    fi
+
+    if grep -q 'routerconfigured' /var/www/html/config.php; then
+      echo "OK:   \$CFG->routerconfigured is declared."
+    else
+      echo "FAIL: \$CFG->routerconfigured is missing from config.php."
+      fail=1
+    fi
+  else
+    echo "SKIP: pre-5.1 layout, no public/r.php; router checks do not apply."
+    if grep -q '/r.php' /etc/nginx/nginx.conf; then
+      echo "FAIL: nginx points at r.php but this Moodle does not ship one."
+      fail=1
+    fi
+  fi
+
+  # Ask Moodle itself, which is the only opinion that matters.
+  php -r '
+    define("CLI_SCRIPT", true);
+    require("/var/www/html/config.php");
+    $rc = 0;
+    foreach (["configrw", "router"] as $name) {
+        $class = "core\\check\\environment\\" . $name;
+        if (!class_exists($class)) {
+            echo "SKIP: core_{$name} does not exist in this Moodle version.\n";
+            continue;
+        }
+        $result = (new $class())->get_result();
+        $status = $result->get_status();
+        if ($status === "ok") {
+            echo "OK:   core_{$name} => {$status}\n";
+        } else {
+            echo "FAIL: core_{$name} => {$status} | " . strip_tags($result->get_summary()) . "\n";
+            $rc = 1;
+        }
+    }
+    exit($rc);
+  ' || fail=1
+
+  if [ "$fail" != "0" ]; then
+    echo "Status-check regression test FAILED."
+    exit 1
+  fi
+  echo "Status-check regression test passed."
+}
+
+if [ "$MODE" = "checks" ]; then
+  run_checks_smoke_test
+  exit 0
+fi
 
 if [ "$MODE" = "moosh" ]; then
   run_moosh_smoke_test

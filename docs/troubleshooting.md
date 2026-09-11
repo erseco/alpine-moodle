@@ -233,9 +233,20 @@ docker compose exec moodle composer install --no-dev --classmap-authoritative \
 
 ## `config.php writable` warning
 
-**Cause**: `config.php` is intentionally made read-only after install for security. Moodle surfaces this as a warning in the admin dashboard. Related: [#12](https://github.com/erseco/alpine-moodle/issues/12).
+**Cause**: Moodle's `core_configrw` security check warns when PHP can still write its own `config.php`. The image makes it read-only (`0444`) on every boot. On Moodle 5.1+ the check looks at **two** files — `/var/www/html/config.php` and the loader stub `/var/www/html/public/config.php` — and images before the #168 fix only hardened the first one, so the warning stayed even after a manual `chmod 444` on the main file. Related: [#12](https://github.com/erseco/alpine-moodle/issues/12), [#168](https://github.com/erseco/alpine-moodle/issues/168).
 
-**Fix**: This is by design and can be safely ignored. It is not an error.
+**Fix**: Update to a current image and restart the container. To check by hand:
+
+```sh
+docker compose exec moodle ls -l /var/www/html/config.php /var/www/html/public/config.php
+# both should be -r--r--r--
+```
+
+## "The router is not correctly configured" (Moodle 5.2+)
+
+**Cause**: Moodle 5.2 added the `core_router` status check. It requires the web server to send every request that does not resolve to a real file to Moodle's front controller `public/r.php`, and `$CFG->routerconfigured = true;` in `config.php`. Related: [#168](https://github.com/erseco/alpine-moodle/issues/168), [Configuring the Router](https://docs.moodle.org/en/Configuring_the_Router).
+
+**Fix**: Update to a current image and restart the container — the entrypoint rewrites the nginx fallback to `r.php` and sets `$CFG->routerconfigured` itself, but only after confirming nginx really was reconfigured. Do **not** add `$CFG->routerconfigured = true;` by hand on an older image: it silences the check without fixing the routing, and Moodle will then report the individual route failures instead.
 
 ## Where to find Moodle debug output
 

@@ -126,7 +126,8 @@ jobs:
             .
 
       # Steps 9x: Functional tests (HTTP web check + Moodle-context moosh smoke
-      # + code-sync regression) via the shared orchestrator tests/compose-test.sh.
+      # + status-check + code-sync regression) via the shared orchestrator
+      # tests/compose-test.sh.
       # On pull requests the dedicated moodle-matrix workflow already runs these
       # across every supported Moodle version, so here they run only on
       # push/dispatch as a release smoke test. They test the Moodle version
