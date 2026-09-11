@@ -9,6 +9,8 @@
 #      run_tests.sh) and takes its exit code as the readiness/HTTP/SQLite result.
 #   3. Moodle-context moosh smoke test: runs `run_tests.sh moosh` INSIDE the
 #      running `app` container (moosh needs the Moodle codebase + DB).
+#   4. Moodle-context status-check regression test (`run_tests.sh checks`),
+#      before and after the code sync + restart.
 #
 # The stack is always torn down; on any failure the container logs, the failing
 # moosh output and the Moodle version are dumped for debugging.
@@ -77,7 +79,16 @@ if ! dc exec -T -e MOODLE_VERSION="${MOODLE_VERSION}" app sh /tmp/run_tests.sh m
   exit 1
 fi
 
-# 3) Moodle code-sync regression test (#103): stale volume → rsync core, keep
+# 3) Moodle status-check regression test (#168): config.php read-only on every
+#    layout, and unmatched requests routed to public/r.php on 5.1+.
+echo ">> Running the Moodle status-check regression test inside app..."
+if ! dc exec -T app sh /tmp/run_tests.sh checks; then
+  echo "ERROR: status-check regression test failed for Moodle ${MOODLE_VERSION} (${FILE})."
+  dump_logs
+  exit 1
+fi
+
+# 4) Moodle code-sync regression test (#103): stale volume → rsync core, keep
 #    config.php + EXTRA_PLUGIN_PATHS. Runs inside app (needs real trees).
 echo ">> Running the Moodle code-sync smoke test inside app..."
 if ! dc exec -T app sh /tmp/run_tests.sh sync; then
@@ -86,7 +97,7 @@ if ! dc exec -T app sh /tmp/run_tests.sh sync; then
   exit 1
 fi
 
-# 4) Boot-after-sync regression (#161): restart the app so the whole
+# 5) Boot-after-sync regression (#161): restart the app so the whole
 #    entrypoint (02-configure-moodle.sh included) re-runs against the synced
 #    tree. A sync that deletes anything the boot needs (helper CLI scripts,
 #    theme config.php files, …) only explodes on the NEXT boot — exactly what
@@ -101,6 +112,16 @@ fi
 echo ">> Re-running the HTTP web check after the restart..."
 if ! dc run --rm --no-deps sut; then
   echo "ERROR: HTTP web check failed after the post-sync restart (Moodle ${MOODLE_VERSION}, ${FILE})."
+  dump_logs
+  exit 1
+fi
+
+# The code sync restores public/config.php from the pristine tree as 0644 and
+# nginx.conf edits must stay idempotent, so re-assert the status checks on the
+# post-sync boot (#168).
+echo ">> Re-running the status-check regression test after the restart..."
+if ! dc exec -T app sh /tmp/run_tests.sh checks; then
+  echo "ERROR: status-check regression test failed after the post-sync restart (${FILE})."
   dump_logs
   exit 1
 fi

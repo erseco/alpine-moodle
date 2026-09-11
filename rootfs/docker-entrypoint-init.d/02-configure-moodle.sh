@@ -34,6 +34,10 @@ fi
 # MOODLE_PUBLIC_DIR is set to true if that directory exists, otherwise it is false (for older versions).
 MOODLE_PUBLIC_DIR=false
 
+# Set to true once nginx really routes unmatched URLs to public/r.php; only then
+# may $CFG->routerconfigured be declared (see the public/ detection below).
+MOODLE_ROUTER_CONFIGURED=false
+
 # Function to update or add a configuration value
 update_or_add_config_value() {
     local key="$1"  # The configuration key (e.g., $CFG->wwwroot)
@@ -265,6 +269,12 @@ upgrade_config_file() {
     update_or_add_config_value "\$CFG->sslproxy" "$SSLPROXY"
     update_or_add_config_value "\$CFG->preventexecpath" "true"
 
+    # Only claim the router is configured when nginx actually forwards unmatched
+    # URLs to r.php, otherwise the check would be silenced without being fixed.
+    if [ "$MOODLE_ROUTER_CONFIGURED" = "true" ]; then
+        update_or_add_config_value "\$CFG->routerconfigured" "true"
+    fi
+
     # TODO: WIP for moodle 5.1dev
     update_or_add_config_value "\$CFG->enableanalytics" "false"
 
@@ -324,14 +334,64 @@ configure_moodle_settings() {
 
 # Function to perform some final configurations
 final_configurations() {
-    # Avoid writing the config file
-    chmod 444 config.php
-
     # In Moodle versions prior to 5.1, the /public directory does not exist.
     # In these versions, we patch publicpaths.php to append ":8080" to the wwwroot check
     # in order to support running behind a custom port inside the container.
+    # The grep guard keeps it idempotent: this now runs on every start, and the
+    # code sync restores the pristine file each time it refreshes the tree.
     if [ "$MOODLE_PUBLIC_DIR" = "false" ]; then
-        sed -i 's/wwwroot/wwwroot\ \. \"\:8080\"/g' /var/www/html/lib/classes/check/environment/publicpaths.php
+        publicpaths_file=/var/www/html/lib/classes/check/environment/publicpaths.php
+        grep -q ':8080' "$publicpaths_file" || \
+            sed -i 's/wwwroot/wwwroot\ \. \"\:8080\"/g' "$publicpaths_file"
+    fi
+}
+
+# Point nginx at Moodle's front controller (public/r.php).
+#
+# Moodle 5.1+ ships r.php and since 5.2 the core_router check reports an error
+# unless requests that do not resolve to a real file reach it (#168):
+#   * unmatched URLs must fall back to /r.php instead of /index.php
+#   * requests for a *non-existent* .php file (the routed-shim case, e.g.
+#     /lib/exampleshimroute2.php) must reach r.php too, instead of being handed
+#     to PHP-FPM, which answers "File not found". Testing $fastcgi_script_name
+#     (the part before PATH_INFO) keeps /theme/image.php/<theme>/... working,
+#     but try_files rewrites $uri and drops the path info, so it is stashed in
+#     $path_info beforehand and passed from there.
+# This mirrors the config published at https://docs.moodle.org/en/Nginx — see
+# also https://docs.moodle.org/en/Configuring_the_Router
+# The edits are guarded so a container restart does not apply them twice.
+configure_nginx_router() {
+    sed -i 's|/index\.php?q=$uri&$args;|/r.php$is_args$args;|' /etc/nginx/nginx.conf
+
+    if ! grep -q 'try_files $fastcgi_script_name' /etc/nginx/nginx.conf; then
+        sed -i -e '/fastcgi_split_path_info/a\            set $path_info $fastcgi_path_info;\n            try_files $fastcgi_script_name $fastcgi_script_name/ /r.php$is_args$args;' \
+               -e 's|fastcgi_param PATH_INFO $fastcgi_path_info;|fastcgi_param PATH_INFO $path_info;|' \
+            /etc/nginx/nginx.conf
+    fi
+
+    if grep -q 'try_files $uri $uri/ /r.php' /etc/nginx/nginx.conf &&
+       grep -q 'try_files $fastcgi_script_name' /etc/nginx/nginx.conf &&
+       grep -q 'fastcgi_param PATH_INFO $path_info;' /etc/nginx/nginx.conf; then
+        MOODLE_ROUTER_CONFIGURED=true
+        echo "nginx configured to route unmatched requests to public/r.php."
+    else
+        echo "WARNING: could not point the nginx fallback at r.php; the Moodle router check will report an error." >&2
+    fi
+}
+
+# Make config.php read-only so Moodle's core_configrw check passes (#168).
+#
+# Two reasons this runs on EVERY start instead of only after a fresh install:
+#   * upgrade_config_file() rewrites config.php with `sed -i`, which recreates
+#     the file with default permissions.
+#   * Since Moodle 5.1 the check looks at BOTH "$CFG->root/config.php" (the real
+#     config) and "$CFG->dirroot/config.php" (public/config.php, the loader
+#     stub). The stub belongs to the Moodle source tree, so the code sync
+#     (010-sync-moodle-code.sh) restores it as 0644 on every refresh.
+protect_config_files() {
+    chmod 444 "$config_file"
+    if [ -f /var/www/html/public/config.php ]; then
+        chmod 444 /var/www/html/public/config.php
     fi
 }
 
@@ -379,7 +439,13 @@ if [ -d /var/www/html/public ]; then
     MOODLE_PUBLIC_DIR=true
     export nginx_root_directory="/var/www/html/public"
 
-    sed -i 's|root .*;|root /var/www/html/public;|' /etc/nginx/nginx.conf
+    # Only the document root; "root .*;" also matched the /50x.html block and
+    # broke nginx's own error pages.
+    sed -i 's|root /var/www/html;|root /var/www/html/public;|' /etc/nginx/nginx.conf
+
+    if [ -f /var/www/html/public/r.php ]; then
+        configure_nginx_router
+    fi
 
     echo "Running composer install for Moodle 5.1+..."
     composer install --no-dev --classmap-authoritative
@@ -402,7 +468,6 @@ case "$isinstalled_rc" in
 0)
     install_database
     configure_moodle_settings
-    final_configurations
     ;;
 2)
     configure_moodle_settings
@@ -430,6 +495,9 @@ if [ -n "$REDIS_HOST" ]; then
     echo "Configuring redis cache..."
     php -d max_input_vars=10000 "$alpine_moodle_cli/configure_redis.php" "${REDIS_HOST}" "${REDIS_PASSWORD}" "${REDIS_USER}"
 fi
+
+final_configurations
+protect_config_files
 
 # Execute post-install commands if the variable is set
 if [ -n "$POST_CONFIGURE_COMMANDS" ]; then
