@@ -23,19 +23,37 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Resolve release policy
+        id: policy
+        env:
+          REQUESTED_VERSION: ${{ inputs.moodle_version }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+            VERSION="$REQUESTED_VERSION"
+          elif [[ "$GITHUB_REF_TYPE" == tag ]]; then
+            VERSION="$GITHUB_REF_NAME"
+          else
+            VERSION=main
+          fi
+          NEWEST=$(git ls-remote --tags --refs https://github.com/moodle/moodle.git \
+            | awk '{sub("refs/tags/", "", $2); print $2}' \
+            | grep -E '^v5\.2\.[0-9]+$' | sort -V | tail -1)
+          bash scripts/release-policy.sh "$VERSION" "$NEWEST" >> "$GITHUB_OUTPUT"
+
       # Step 2: Extract metadata for Docker
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v6
         with:
+          flavor: latest=false
           images: |
             ${{ github.repository }}
             ghcr.io/${{ github.repository }}
           tags: |
-            type=ref,event=tag
-            type=raw,value=latest,enable=${{ github.ref_type == 'tag' }}
-            type=raw,value=main,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=beta,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=${{ steps.policy.outputs.version }}
+            type=raw,value=latest,enable=${{ steps.policy.outputs.latest == 'true' }}
+            type=raw,value=beta,enable=${{ steps.policy.outputs.version == 'main' }}
 
       # Step 3: Set up QEMU for multi-platform builds
       - name: Set up QEMU
@@ -88,13 +106,13 @@ jobs:
       # the build early when a tag does not exist in moodle/moodle.
       - name: Determine Moodle version
         id: moodle_version
+        env:
+          VERSION: ${{ steps.policy.outputs.version }}
         run: |
-          if [[ $GITHUB_REF == refs/tags/* ]]; then
-            VERSION=${GITHUB_REF#refs/tags/}
-            REF="refs/tags/${VERSION}"
-          else
-            VERSION=main
+          if [[ "$VERSION" == main ]]; then
             REF="refs/heads/main"
+          else
+            REF="refs/tags/${VERSION}"
           fi
           # tail -1: for annotated tags the peeled ^{} line (the commit) sorts last.
           COMMIT=$(git ls-remote https://github.com/moodle/moodle.git "$REF" "${REF}^{}" | tail -n 1 | cut -f1)
@@ -103,8 +121,8 @@ jobs:
             exit 1
           fi
           echo "Resolved ${VERSION} -> ${COMMIT}"
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "commit=${COMMIT}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "commit=${COMMIT}" >> "$GITHUB_OUTPUT"
 
       # Fast, docker-free coverage of the shell helpers (#103, #161).
       - name: Unit tests (shell scripts)
