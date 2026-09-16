@@ -18,7 +18,7 @@ RUN case "$PHP_VERSION" in 83|84) ;; *) echo 'Unsupported PHP runtime' >&2; exit
     # php83-zip provides ZipArchive, used by the Moodle blueprint runner for
     # safe bundle/plugin extraction.
     php${PHP_VERSION}-zip \
-    && php -r 'exit(PHP_MAJOR_VERSION . PHP_MINOR_VERSION === $argv[1] ? 0 : 1);' "$PHP_VERSION" \
+    && test "$(php -r 'echo PHP_MAJOR_VERSION, PHP_MINOR_VERSION;')" = "$PHP_VERSION" \
     # Remove alpine cache
     && rm -rf /var/cache/apk/* \
     # Immutable Moodle source tree used by 010-sync-moodle-code.sh to refresh
