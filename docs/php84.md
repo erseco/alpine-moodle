@@ -1,7 +1,9 @@
 # PHP 8.4 (opt-in)
 
 The default `erseco/alpine-moodle` tags ship **PHP 8.3**. PHP 8.4 is available as an
-**opt-in image line**, published with a `-php84` tag suffix, for **Moodle 5.x and later**.
+**opt-in image line**, published with a `-php84` tag suffix, for **Moodle 5.0–5.2**.
+Moodle 5.3 beta/RC tags use PHP 8.4 directly, without a suffix. See the
+[5.3 migration plan and validation](moodle-53-migration.md).
 
 !!! info "Why PHP 8.3 is still the default"
     Moodle **4.5 LTS** does not support PHP 8.4, and the unsuffixed tags (`latest`,
@@ -16,7 +18,7 @@ The default `erseco/alpine-moodle` tags ship **PHP 8.3**. PHP 8.4 is available a
 | Moodle 5.0.x   | `v5.0.x`              | `v5.0.x-php84`       |
 | Moodle 5.1.x   | `v5.1.x`              | `v5.1.x-php84`       |
 | Moodle 5.2.x   | `v5.2.x`              | `v5.2.x-php84`       |
-| Moodle 5.3 LTS and later | `v5.3.x` | `v5.3.x-php84` and later |
+| Moodle 5.3 beta/RC | *(PHP 8.4 directly)* | `v5.3.0-beta` / RC tag, no suffix |
 
 ```bash
 # PHP 8.4 image for Moodle 5.2.1
@@ -48,11 +50,12 @@ same environment variables, same multi-arch targets, same database support
 - The `-php84` images are built from the [`php84` branch](https://github.com/erseco/alpine-moodle/tree/php84)
   by a dedicated `build-php84.yml` workflow.
 - They **never overwrite** the existing `latest`, `main`, or `vX.Y.Z` tags.
-- New Moodle 5.x releases automatically get a matching `-php84` tag; the default
+- New Moodle 5.0–5.2 releases automatically get a matching `-php84` tag; the default
   PHP 8.3 tags are unaffected.
 
 ## When will PHP 8.4 become the default?
 
 The default official tags — including `latest` — will move to PHP 8.4 once
 **Moodle 5.3 LTS** (planned for **5 October 2026**) is released and becomes the new
-LTS baseline. Until then, PHP 8.4 remains opt-in via the `-php84` tags.
+LTS baseline. Moodle 4.5 remains on PHP 8.3. Beta/RC testing already uses PHP 8.4;
+stable/default promotion is a separate PR.

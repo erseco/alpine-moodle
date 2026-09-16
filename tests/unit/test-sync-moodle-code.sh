@@ -260,6 +260,20 @@ SYNC_MOODLE_CODE=auto EXTRA_PLUGIN_PATHS="local/custom" run_sync
 assert_eq "EXTRA path relocated under public/" "custom-no-versionphp" "$(cat "${HTML}/public/local/custom/lib.php" 2>/dev/null || true)"
 assert_no_file "EXTRA path not left at the pre-5.1 location" "${HTML}/local/custom"
 
+echo "== test 14: retired bundled plugins are not preserved as third-party =="
+rm -rf "$SRC" "$HTML"
+mkdir -p "$SRC/public/lib" "$SRC/lib"
+printf '%s\n' '<?php' '$version = 2026091600.00;' > "$SRC/public/version.php"
+printf '%s\n' '{"deleted":{"qtype":["random"]}}' > "$SRC/lib/plugins.json"
+printf '%s\n' '{"plugintypes":{"qtype":"public/question/type"}}' > "$SRC/lib/components.json"
+seed_tree "$HTML" "2024100714.00" "old-core"
+mkdir -p "$HTML/question/type/random" "$HTML/question/type/customquestion"
+printf 'old-core-plugin\n' > "$HTML/question/type/random/version.php"
+printf 'custom-plugin\n' > "$HTML/question/type/customquestion/version.php"
+SYNC_MOODLE_CODE=auto EXTRA_PLUGIN_PATHS= SYNC_PRESERVE_PLUGINS=true run_sync
+assert_no_file "removed qtype_random is not restored" "$HTML/public/question/type/random"
+assert_eq "custom question type survives" "custom-plugin" "$(cat "$HTML/public/question/type/customquestion/version.php")"
+
 echo
 if [ "$FAILED" -eq 0 ]; then
   echo "All unit tests passed."

@@ -37,6 +37,7 @@ DIR="${MOODLE_DIR:-/var/www/html}"
 
 case "$MOODLE_VERSION" in
   main)  pr=1 ;;
+  v5.3.*) pr=7 ;; # Dedicated beta/stable 5.3 patch; independent of upstream main.
   v5.2*) pr=5 ;;
   v5.1*) pr=2 ;;
   v5.0*) pr=3 ;;

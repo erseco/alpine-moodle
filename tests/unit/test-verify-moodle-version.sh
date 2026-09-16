@@ -86,6 +86,10 @@ write_release "5.2rc2 (Build: 20260410)"
 run_case "v5.2.0-rc2 vs 5.2rc2" 0 v5.2.0-rc2
 write_release "5.2beta (Build: 20260320)"
 run_case "v5.2.0-beta vs 5.2beta" 0 v5.2.0-beta
+run_case "5.3 beta rejects a stale 5.2 beta" 1 v5.3.0-beta
+write_release "5.3beta (Build: 20260916)"
+run_case "exact 5.3 beta" 0 v5.3.0-beta
+run_case "5.3 RC rejects beta" 1 v5.3.0-rc1
 
 echo "== missing/unparseable version.php fails"
 : > "$STUB_VERSION_PHP"

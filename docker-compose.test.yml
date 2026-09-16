@@ -11,6 +11,8 @@ services:
         # Example:
         # MOODLE_VERSION=v4.5.12 docker compose -f docker-compose.test.yml up --build
         MOODLE_VERSION: ${MOODLE_VERSION:-main}
+        PHP_VERSION: ${PHP_VERSION:-83}
+        PHP_WEBSERVER_VERSION: ${PHP_WEBSERVER_VERSION:-3.20}
     environment:
       - SITE_URL=http://app:8080
     # Mounted so the Moodle-context moosh smoke test can be run inside app:

@@ -361,7 +361,9 @@ final_configurations() {
 # also https://docs.moodle.org/en/Configuring_the_Router
 # The edits are guarded so a container restart does not apply them twice.
 configure_nginx_router() {
-    sed -i 's|/index\.php?q=$uri&$args;|/r.php$is_args$args;|' /etc/nginx/nginx.conf
+    # 3.20 uses ?q=$uri&$args; 3.23 uses $is_args$args. Handle both bases.
+    sed -i -e 's|/index\.php?q=$uri&$args;|/r.php$is_args$args;|' \
+           -e 's|/index\.php$is_args$args;|/r.php$is_args$args;|' /etc/nginx/nginx.conf
 
     if ! grep -q 'try_files $fastcgi_script_name' /etc/nginx/nginx.conf; then
         sed -i -e '/fastcgi_split_path_info/a\            set $path_info $fastcgi_path_info;\n            try_files $fastcgi_script_name $fastcgi_script_name/ /r.php$is_args$args;' \
