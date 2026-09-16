@@ -81,7 +81,7 @@ echo "== main only requires a parseable release"
 write_release "5.3dev (Build: 20260724)"
 run_case "main vs 5.3dev" 0 main
 
-echo "== pre-release tags skip the strict match"
+echo "== pre-release tags match Moodle's normalized release spelling"
 write_release "5.2rc2 (Build: 20260410)"
 run_case "v5.2.0-rc2 vs 5.2rc2" 0 v5.2.0-rc2
 write_release "5.2beta (Build: 20260320)"
