@@ -11,7 +11,7 @@
 #
 set -eu
 
-ROOT="$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)"
+ROOT="$(CDPATH='' cd -- "$(dirname "$0")/../.." && pwd)"
 SCRIPT="${ROOT}/tests/verify-moodle-version.sh"
 FAILED=0
 
@@ -90,6 +90,15 @@ run_case "5.3 beta rejects a stale 5.2 beta" 1 v5.3.0-beta
 write_release "5.3beta (Build: 20260916)"
 run_case "exact 5.3 beta" 0 v5.3.0-beta
 run_case "5.3 RC rejects beta" 1 v5.3.0-rc1
+write_release "5.3beta2 (Build: 20260923)"
+run_case "numbered 5.3 beta" 0 v5.3.0-beta2
+run_case "beta2 cannot pass as beta1" 1 v5.3.0-beta1
+write_release "5.3rc2 (Build: 20260930)"
+run_case "second 5.3 RC" 0 v5.3.0-rc2
+run_case "rc2 cannot pass as rc1" 1 v5.3.0-rc1
+run_case "RC cannot pass as stable" 1 v5.3.0
+write_release "5.3rc10 (Build: 20261001)"
+run_case "multi-digit 5.3 RC" 0 v5.3.0-rc10
 
 echo "== missing/unparseable version.php fails"
 : > "$STUB_VERSION_PHP"

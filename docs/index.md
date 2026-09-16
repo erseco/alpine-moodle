@@ -15,7 +15,7 @@ and is configured entirely through environment variables.
 
 Highlights:
 
-- PHP 8.3 FPM with `ondemand` process manager — low idle footprint (opt-in [PHP 8.4 images](php84.md) for Moodle 5.x)
+- PHP 8.4 FPM with `ondemand` process manager — legacy Moodle tags retain PHP 8.3 ([runtime policy](php84.md))
 - Works with PostgreSQL, MariaDB/MySQL, or SQLite (single-container dev mode)
 - Optional Redis session handler for HA deployments
 - Supports Moodle **4.x**, **5.0**, **5.1** (with `/public` directory) and `main`
@@ -34,7 +34,7 @@ Highlights:
 - :material-shield-lock: **[Reverse Proxy](reverse-proxy.md)** — Traefik, Nginx, NPM, Apache, Caddy recipes.
 - :material-database: **[Environment Variables](environment-variables.md)** — every supported knob, with defaults.
 - :material-harddisk: **[Persistence & Volumes](persistence.md)** — what to mount and what to back up.
-- :material-language-php: **[PHP 8.4 (opt-in)](php84.md)** — `-php84` tags for Moodle 5.x while the default stays on PHP 8.3.
+- :material-language-php: **[PHP runtime policy](php84.md)** — PHP 8.4 for 5.3+, legacy tags retain PHP 8.3.
 - :material-update: **[Upgrading](upgrading.md)** — how to move between Moodle versions safely.
 - :material-lightbulb-on: **[Troubleshooting](troubleshooting.md)** — solutions to the most common deployment issues.
 - :material-help-circle: **[FAQ](faq.md)** — short answers to recurring questions.
