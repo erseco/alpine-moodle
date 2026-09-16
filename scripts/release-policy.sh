@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
-# Resolve the requested upstream version and publication policy (no network).
+# Resolve publication policy; only --newest contacts upstream.
 set -euo pipefail
-version=${1:?usage: release-policy.sh VERSION [NEWEST_STABLE_TAG]}
+version=${1:?usage: release-policy.sh VERSION [NEWEST_STABLE_TAG] | --newest}
+# Deliberately selected production line: Moodle 5.3 LTS.
+stable_pattern='^v5[.]3[.][0-9]+$'
+if [[ "$version" == --newest ]]; then
+  git ls-remote --tags --refs https://github.com/moodle/moodle.git \
+    | awk -v pattern="$stable_pattern" '{sub("refs/tags/", "", $2); if ($2 ~ pattern) print $2}' \
+    | sort -V | tail -1
+  exit 0
+fi
 newest=${2:-}
 case "$version" in
   main) ;;
@@ -9,9 +17,8 @@ case "$version" in
     echo "Invalid Moodle version: $version" >&2; exit 1;
   } ;;
 esac
-# Deliberately selected production line: Moodle 5.3 LTS.
 latest=false
-if [[ "$version" =~ ^v5\.3\.[0-9]+$ && "$version" == "$newest" ]]; then
+if [[ "$version" =~ $stable_pattern && "$version" == "$newest" ]]; then
   latest=true
 fi
 printf 'version=%s\nlatest=%s\n' "$version" "$latest"

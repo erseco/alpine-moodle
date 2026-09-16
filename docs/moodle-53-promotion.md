@@ -1,7 +1,10 @@
 # Stable 5.3 promotion — release gate
 
 Keep this PR **draft** until Moodle 5.3 stable is published (target 2026-10-05).
-It depends on the release-policy and readiness PRs. Do not merge merely because
+It depends on merged #170/#171 and the serialized latest-promotion PR #173.
+The latter is integrated here, including the Hadolint fix and single-source
+5.3 stable policy. Promotion tests also reject a late 5.2 build after the switch.
+Do not merge merely because
 the beta tests pass.
 
 This change selects PHP 8.4/Alpine base 3.23 for local default builds, development,

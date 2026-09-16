@@ -18,6 +18,10 @@ on:
 jobs:
   buildx:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.policy.outputs.version }}
+      latest: ${{ steps.policy.outputs.latest }}
+      digest: ${{ steps.push.outputs.digest }}
     steps:
       # Step 1: Checkout the code
       - name: Checkout
@@ -36,9 +40,7 @@ jobs:
           else
             VERSION=main
           fi
-          NEWEST=$(git ls-remote --tags --refs https://github.com/moodle/moodle.git \
-            | awk '{sub("refs/tags/", "", $2); print $2}' \
-            | awk '/^v5\.3\.[0-9]+$/' | sort -V | tail -1)
+          NEWEST=$(bash scripts/release-policy.sh --newest)
           bash scripts/release-policy.sh "$VERSION" "$NEWEST" >> "$GITHUB_OUTPUT"
 
       - name: Select PHP runtime
@@ -58,7 +60,6 @@ jobs:
             ghcr.io/${{ github.repository }}
           tags: |
             type=raw,value=${{ steps.policy.outputs.version }}
-            type=raw,value=latest,enable=${{ steps.policy.outputs.latest == 'true' }}
             type=raw,value=beta,enable=${{ steps.policy.outputs.version == 'main' }}
 
       # Step 3: Set up QEMU for multi-platform builds
@@ -200,6 +201,7 @@ jobs:
 
       # Step 11: Build and Push to both registries in a single step
       - name: Build and push
+        id: push
         if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v7
         with:
@@ -236,3 +238,36 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
           short-description: ${{ github.event.repository.description }}
+
+  promote-latest:
+    needs: buildx
+    if: github.event_name != 'pull_request' && needs.buildx.outputs.latest == 'true'
+    runs-on: ubuntu-latest
+    # Serialize promotions without dropping a newer release behind a late old build.
+    concurrency:
+      group: moodle-latest-promotion
+      queue: max
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # A late build must use today's policy, not the policy at its old tag.
+          ref: main
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Recheck stable release and promote exact multi-arch digest
+        env:
+          VERSION: ${{ needs.buildx.outputs.version }}
+          DIGEST: ${{ needs.buildx.outputs.digest }}
+          REPOSITORY: ${{ github.repository }}
+        run: bash scripts/promote-latest.sh "$VERSION" "$DIGEST" "$REPOSITORY"
