@@ -25,7 +25,7 @@ dc run --rm sut
 dc exec -T app php /tmp/upgrade-fixture.php verify
 dc exec -T app sh /tmp/run_tests.sh moosh
 dc exec -T app sh /tmp/run_tests.sh checks
-dc exec -T app php /var/www/html/public/admin/cli/cron.php
+dc exec -T app php /var/www/html/admin/cli/cron.php --keep-alive=0
 dc restart app
 dc run --rm sut
 dc exec -T app php /tmp/upgrade-fixture.php verify

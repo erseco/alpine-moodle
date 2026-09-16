@@ -145,4 +145,7 @@ docker compose exec moodle php admin/cli/maintenance.php --disable
 
 ## Skipping versions
 
-Moodle's upgrade scripts support skipping minor versions but you should not jump across multiple major versions in one go. Upgrade step by step (for example `4.1 → 4.5 → 5.0 → 5.1`), backing up between each step.
+Follow the target release's minimum supported source version. Moodle 5.3 supports
+upgrading directly from 4.5; intermediate 5.0/5.1/5.2 upgrades are not required.
+Test the database requirements and actual plugins on a restored staging copy,
+and back up both the database and files. See [the 5.3 migration plan](moodle-53-migration.md).

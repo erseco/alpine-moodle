@@ -268,6 +268,8 @@ printf '%s\n' '{"deleted":{"qtype":["random"]}}' > "$SRC/lib/plugins.json"
 printf '%s\n' '{"plugintypes":{"qtype":"public/question/type"}}' > "$SRC/lib/components.json"
 seed_tree "$HTML" "2024100714.00" "old-core"
 mkdir -p "$HTML/question/type/random" "$HTML/question/type/customquestion"
+mkdir -p "$HTML/question/type/random/subplugin"
+printf 'retired-subplugin\n' > "$HTML/question/type/random/subplugin/version.php"
 printf 'old-core-plugin\n' > "$HTML/question/type/random/version.php"
 printf 'custom-plugin\n' > "$HTML/question/type/customquestion/version.php"
 SYNC_MOODLE_CODE=auto EXTRA_PLUGIN_PATHS= SYNC_PRESERVE_PLUGINS=true run_sync

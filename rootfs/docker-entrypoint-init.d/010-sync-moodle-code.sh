@@ -263,7 +263,9 @@ if [ "$PRESERVE_PLUGINS" = "true" ] && [ "$html_has_code" = "yes" ]; then
     if is_ignored_plugin_dir "$reldir"; then
       continue
     fi
-    if grep -Fxq "$(translate_layout_path "$reldir")" "${tmpdir}/deleted-plugins"; then
+    if awk -v dir="$(translate_layout_path "$reldir")" \
+      '$0 == dir || index(dir, $0 "/") == 1 { found = 1 } END { exit !found }' \
+      "${tmpdir}/deleted-plugins"; then
       echo "  removing retired core plugin ${reldir}"
       continue
     fi

@@ -27,7 +27,7 @@ services:
     restart: unless-stopped
 
   postgres:
-    image: postgres:alpine
+    image: postgres:17-alpine
     environment:
       - POSTGRES_PASSWORD=moodle
       - POSTGRES_USER=moodle
