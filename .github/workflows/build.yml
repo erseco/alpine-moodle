@@ -41,6 +41,12 @@ jobs:
             | grep -E '^v5\.2\.[0-9]+$' | sort -V | tail -1)
           bash scripts/release-policy.sh "$VERSION" "$NEWEST" >> "$GITHUB_OUTPUT"
 
+      - name: Select PHP runtime
+        id: runtime
+        env:
+          VERSION: ${{ steps.policy.outputs.version }}
+        run: bash scripts/image-runtime.sh "$VERSION" >> "$GITHUB_OUTPUT"
+
       # Step 2: Extract metadata for Docker
       - name: Docker meta
         id: meta
@@ -141,6 +147,8 @@ jobs:
           docker buildx build --load \
             --build-arg MOODLE_VERSION=${{ steps.moodle_version.outputs.version }} \
             --build-arg MOODLE_COMMIT=${{ steps.moodle_version.outputs.commit }} \
+            --build-arg PHP_VERSION=${{ steps.runtime.outputs.php }} \
+            --build-arg PHP_WEBSERVER_VERSION=${{ steps.runtime.outputs.base }} \
             .
 
       # Steps 9x: Functional tests (HTTP web check + Moodle-context moosh smoke
@@ -155,18 +163,24 @@ jobs:
         if: github.event_name != 'pull_request'
         env:
           MOODLE_VERSION: ${{ steps.moodle_version.outputs.version }}
+          PHP_VERSION: ${{ steps.runtime.outputs.php }}
+          PHP_WEBSERVER_VERSION: ${{ steps.runtime.outputs.base }}
         run: ./tests/compose-test.sh docker-compose.test.yml
 
       - name: Test (MariaDB)
         if: github.event_name != 'pull_request'
         env:
           MOODLE_VERSION: ${{ steps.moodle_version.outputs.version }}
+          PHP_VERSION: ${{ steps.runtime.outputs.php }}
+          PHP_WEBSERVER_VERSION: ${{ steps.runtime.outputs.base }}
         run: ./tests/compose-test.sh docker-compose.test.mariadb.yml
 
       - name: Test (SQLite)
         if: github.event_name != 'pull_request'
         env:
           MOODLE_VERSION: ${{ steps.moodle_version.outputs.version }}
+          PHP_VERSION: ${{ steps.runtime.outputs.php }}
+          PHP_WEBSERVER_VERSION: ${{ steps.runtime.outputs.base }}
         run: ./tests/compose-test.sh docker-compose.test.sqlite.yml
 
       # Step 10: Release gate (#161). Build the amd64 image locally and assert
@@ -179,6 +193,8 @@ jobs:
           docker buildx build --load \
             --build-arg MOODLE_VERSION=${{ steps.moodle_version.outputs.version }} \
             --build-arg MOODLE_COMMIT=${{ steps.moodle_version.outputs.commit }} \
+            --build-arg PHP_VERSION=${{ steps.runtime.outputs.php }} \
+            --build-arg PHP_WEBSERVER_VERSION=${{ steps.runtime.outputs.base }} \
             -t alpine-moodle:verify .
           ./tests/verify-moodle-version.sh alpine-moodle:verify "${{ steps.moodle_version.outputs.version }}"
 
@@ -190,10 +206,12 @@ jobs:
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          platforms: linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/386,linux/ppc64le,linux/s390x
+          platforms: linux/amd64,linux/arm64,linux/ppc64le,linux/s390x
           build-args: |
             MOODLE_VERSION=${{ steps.moodle_version.outputs.version }}
             MOODLE_COMMIT=${{ steps.moodle_version.outputs.commit }}
+            PHP_VERSION=${{ steps.runtime.outputs.php }}
+            PHP_WEBSERVER_VERSION=${{ steps.runtime.outputs.base }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

@@ -7,6 +7,8 @@ services:
         # Set MOODLE_VERSION in the environment to test a specific git tag;
         # defaults to main.
         MOODLE_VERSION: ${MOODLE_VERSION:-main}
+        PHP_VERSION: ${PHP_VERSION:-83}
+        PHP_WEBSERVER_VERSION: ${PHP_WEBSERVER_VERSION:-3.20}
     environment:
       - SITE_URL=http://app:8080
       - DB_TYPE=mariadb
@@ -22,7 +24,7 @@ services:
       - mariadb
 
   mariadb:
-    image: mariadb:lts
+    image: mariadb:11.4
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     environment:
       - MYSQL_ROOT_PASSWORD=moodle

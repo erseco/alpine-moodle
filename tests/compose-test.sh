@@ -21,6 +21,10 @@ set -euo pipefail
 
 FILE="${1:?usage: tests/compose-test.sh <compose-file>}"
 export MOODLE_VERSION="${MOODLE_VERSION:-main}"
+runtime=$(bash scripts/image-runtime.sh "$MOODLE_VERSION" "${PHP_VERSION:-auto}")
+PHP_VERSION=$(printf '%s\n' "$runtime" | sed -n 's/^php=//p')
+PHP_WEBSERVER_VERSION=${PHP_WEBSERVER_VERSION:-$(printf '%s\n' "$runtime" | sed -n 's/^base=//p')}
+export PHP_VERSION PHP_WEBSERVER_VERSION
 
 dc() { docker compose --file "$FILE" "$@"; }
 
@@ -70,6 +74,17 @@ if [ "${sut_rc}" != "0" ]; then
   exit 1
 fi
 echo ">> HTTP web check passed for Moodle ${MOODLE_VERSION}."
+
+# Assert the selected runtime, its bitness and the Alpine iconv regression.
+# shellcheck disable=SC2016
+dc exec -T app php -r '
+  if (PHP_MAJOR_VERSION . PHP_MINOR_VERSION !== $argv[1] || PHP_INT_SIZE !== 8
+      || !extension_loaded("sodium") || !extension_loaded("zip")
+      || iconv("UTF-8", "ASCII//TRANSLIT//IGNORE", "café") === false) {
+      fwrite(STDERR, "PHP runtime/extensions/iconv check failed\n"); exit(1);
+  }
+  echo "PHP " . PHP_VERSION . " / 64-bit / extensions / iconv: OK\n";
+' "${PHP_VERSION:-83}"
 
 # 2) Moodle-context moosh smoke test, executed inside the running app container.
 echo ">> Running the Moodle-context moosh smoke test inside app..."

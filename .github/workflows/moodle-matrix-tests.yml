@@ -32,7 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        moodle: [v4.5.12, v5.0.8, v5.1.5, v5.2.1, main]
+        moodle: [v4.5.14, v5.0.10, v5.1.7, v5.2.3, main]
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -49,7 +49,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        moodle: [v4.5.12, v5.2.1]
+        moodle: [v4.5.14, v5.2.3]
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -69,7 +69,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        moodle: [v4.5.12, v5.0.8, v5.1.5, v5.2.1, main]
+        moodle: [v4.5.14, v5.0.10, v5.1.7, v5.2.3, main]
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -77,3 +77,35 @@ jobs:
         env:
           MOODLE_VERSION: ${{ matrix.moodle }}
         run: ./tests/compose-test.sh docker-compose.test.sqlite.yml
+
+  moodle53:
+    name: "Moodle 5.3 beta · PHP 8.4 · ${{ matrix.backend }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [postgres, mariadb, sqlite]
+    env:
+      MOODLE_VERSION: v5.3.0-beta
+      PHP_VERSION: '84'
+      PHP_WEBSERVER_VERSION: '3.23'
+    steps:
+      - uses: actions/checkout@v7
+      - name: Test exact beta on PHP 8.4
+        env:
+          BACKEND: ${{ matrix.backend }}
+        run: |
+          case "$BACKEND" in
+            postgres) FILE=docker-compose.test.yml ;;
+            *) FILE="docker-compose.test.${BACKEND}.yml" ;;
+          esac
+          ./tests/compose-test.sh "$FILE"
+
+  upgrade53:
+    name: "Persistent 4.5/PHP 8.3 → 5.3/PHP 8.4 upgrade"
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - run: ./tests/upgrade-test.sh

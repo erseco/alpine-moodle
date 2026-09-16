@@ -98,7 +98,9 @@ jobs:
             # Create vX.Y.Z-php84 on the php84 branch commit and push it with the
             # PAT so the tag push triggers build-php84.yml (build.yml ignores
             # *-php84 tags). Requires GH_PAT to have push (contents:write) access.
-            if [[ -n "$PHP84_SHA" && "$tag" == v5.* ]]; then
+            # 5.3+ is built from the current main code with its runtime policy,
+            # not the historical php84 branch (which lacks newer fixes).
+            if [[ -n "$PHP84_SHA" && "$tag" =~ ^v5\.[012]\. ]]; then
               php84_tag="${tag}-php84"
               if [[ "$EXISTING_TAGS_PATTERN" == *" $php84_tag "* ]]; then
                 echo "Tag $php84_tag already exists, skipping"

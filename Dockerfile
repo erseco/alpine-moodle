@@ -11,11 +11,14 @@ FROM ${ARCH}erseco/alpine-php-webserver:${PHP_WEBSERVER_VERSION}
 LABEL maintainer="Ernesto Serrano <info@ernesto.es>"
 
 USER root
-RUN apk add --no-cache composer patch rsync php83-posix php83-xmlwriter php83-pecl-redis \
-    php83-ldap php83-pecl-igbinary php83-exif php83-sqlite3 php83-pdo_sqlite \
+ARG PHP_VERSION=83
+RUN case "$PHP_VERSION" in 83|84) ;; *) echo 'Unsupported PHP runtime' >&2; exit 1 ;; esac \
+    && apk add --no-cache composer patch rsync php${PHP_VERSION}-posix php${PHP_VERSION}-xmlwriter php${PHP_VERSION}-pecl-redis \
+    php${PHP_VERSION}-ldap php${PHP_VERSION}-pecl-igbinary php${PHP_VERSION}-exif php${PHP_VERSION}-sqlite3 php${PHP_VERSION}-pdo_sqlite \
     # php83-zip provides ZipArchive, used by the Moodle blueprint runner for
     # safe bundle/plugin extraction.
-    php83-zip \
+    php${PHP_VERSION}-zip \
+    && test "$(php -r 'echo PHP_MAJOR_VERSION, PHP_MINOR_VERSION;')" = "$PHP_VERSION" \
     # Remove alpine cache
     && rm -rf /var/cache/apk/* \
     # Immutable Moodle source tree used by 010-sync-moodle-code.sh to refresh
@@ -27,6 +30,7 @@ USER nobody
 
 # Moodle version configuration
 ARG MOODLE_VERSION=main
+RUN case "$MOODLE_VERSION:$PHP_VERSION" in v4.*:84) echo 'Moodle 4.x does not support PHP 8.4' >&2; exit 1 ;; esac
 # Exact moodle/moodle commit for the download below. CI (build.yml) resolves
 # it from MOODLE_VERSION with git ls-remote, so the download layer's cache key
 # changes whenever upstream moves — without it, BuildKit reused a months-old
