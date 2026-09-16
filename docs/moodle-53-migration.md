@@ -81,7 +81,28 @@ test additionally exposed retired core plugins being misidentified as custom
 plugins; preservation now consults Moodle's own deleted-plugin manifest, with
 a regression check for qtype_random versus a custom question type.
 
-The persistent upgrade result and remote CI results will be recorded after
-completion. Local Docker runs use arm64; CI exercises amd64. Other published
-64-bit platforms have not been execution-tested locally. No production stack
-or registry tag has been changed by these tests.
+Final local results (Docker 29.7.2, arm64, PHP 8.4.21):
+
+| Check | Result |
+|---|---|
+| Beta + PostgreSQL 17 | PASS: install, HTTP, PHP/extensions/iconv, Moosh, router/config permissions, code sync and restart |
+| Beta + MariaDB 11.4 | PASS: same full smoke suite |
+| Beta + SQLite / fork PR #7 | PASS: same suite and SQLite database-file check |
+| Persistent 4.5.14/PHP 8.3 → beta/PHP 8.4, PostgreSQL 17 | PASS: course, data file and installed custom plugin preserved; Moosh, Moodle status, cron and subsequent restart |
+| Image version gate | PASS: accepts actual 5.3beta image; rejects it as 5.2beta |
+| Shell unit suites | PASS: 10 release-policy, 10 runtime, 14 sync scenarios, 13 version checks |
+| Blueprint suite | PASS: 60 assertions plus syntax checks |
+| Static checks | PASS: targeted actionlint, ShellCheck, PHP lint and diff checks |
+
+CI runs the same matrix on amd64, including 4.5.14, 5.0.10, 5.1.7, 5.2.3,
+main, the exact beta and a real persistent upgrade:
+[readiness run](https://github.com/erseco/alpine-moodle/actions/runs/35104896973),
+[promotion-policy run](https://github.com/erseco/alpine-moodle/actions/runs/35104902236).
+These links preserve the code-validation runs before the final report-only
+commit; consult the PR checks for subsequent runs.
+
+The first upgrade attempts exposed the retired-core-plugin bug and the newer
+PostgreSQL minimum. A test-harness cron path was corrected to `admin/cli/cron.php`,
+with `--keep-alive=0`; the final full run exited 0. Temporary test volumes were
+removed by the harness. Other published 64-bit platforms have not been
+execution-tested locally. No production stack or registry tag was changed.

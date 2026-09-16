@@ -8,6 +8,7 @@
 # SQLite support comes from out-of-tree patches in ateeducacion/moodle, each
 # targeting its own stable branch so the diff stays applicable as branches move:
 #   main    -> PR #1 (targets main;              adds the driver)
+#   v5.3.x  -> PR #7 (targets the 5.3 beta baseline until upstream branches)
 #   v5.2.x  -> PR #5 (targets MOODLE_502_STABLE; adds the driver)
 #   v5.1.x  -> PR #2 (targets MOODLE_501_STABLE; adds the driver)
 #   v5.0.x  -> PR #3 (targets MOODLE_500_STABLE; adds the driver)
