@@ -285,7 +285,7 @@ See the full guide, resource descriptors, security model and idempotency notes i
 
 ## PHP 8.4 opt-in images
 
-The default `erseco/alpine-moodle` tags currently remain on **PHP 8.3** to preserve compatibility with existing **Moodle 4.5 LTS** installations and avoid breaking existing deployments.
+Moodle **5.3 LTS and newer**, `latest` and `main` use **PHP 8.4**. Moodle **4.5 LTS** and unsuffixed **5.0–5.2** tags retain **PHP 8.3**.
 
 PHP 8.4 images are available as **opt-in** tags for Moodle 5.0–5.2, identified by a `-php84` suffix. Moodle 5.3 beta/RC tags use PHP 8.4 directly, without that suffix:
 
@@ -303,9 +303,9 @@ docker pull ghcr.io/erseco/alpine-moodle:v5.2.1-php84
 
 > **Moodle 4.x is not available on PHP 8.4.** Moodle 4.5 LTS does not support PHP 8.4, so no `-php84` images are published for the 4.x line — keep using the default PHP 8.3 tags there.
 
-These `-php84` tags are built from the [`php84` branch](https://github.com/erseco/alpine-moodle/tree/php84) and **never overwrite** the existing `latest`, `main`, or `vX.Y.Z` tags, which stay on PHP 8.3 for now.
+These legacy `-php84` tags are built from the [`php84` branch](https://github.com/erseco/alpine-moodle/tree/php84) and **never overwrite** `latest`, `main`, or unsuffixed version tags.
 
-The default official tags — including `latest` — will move to PHP 8.4 once **Moodle 5.3 LTS** (planned for **5 October 2026**) is released and becomes the new LTS baseline.
+`latest` follows the newest stable **5.3 LTS** release on PHP 8.4. Beta/RC and older-series releases never move it. Pin `v4.5.x` to remain on the previous LTS.
 
 See [the 5.3 migration plan and reproducible tests](docs/moodle-53-migration.md).
 Moodle 4.5 tags remain on PHP 8.3 throughout their security-support period.

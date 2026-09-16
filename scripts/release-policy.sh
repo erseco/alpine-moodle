@@ -9,9 +9,9 @@ case "$version" in
     echo "Invalid Moodle version: $version" >&2; exit 1;
   } ;;
 esac
-# Deliberately selected production line; change only in the LTS promotion PR.
+# Deliberately selected production line: Moodle 5.3 LTS.
 latest=false
-if [[ "$version" =~ ^v5\.2\.[0-9]+$ && "$version" == "$newest" ]]; then
+if [[ "$version" =~ ^v5\.3\.[0-9]+$ && "$version" == "$newest" ]]; then
   latest=true
 fi
 printf 'version=%s\nlatest=%s\n' "$version" "$latest"

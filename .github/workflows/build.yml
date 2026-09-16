@@ -38,7 +38,7 @@ jobs:
           fi
           NEWEST=$(git ls-remote --tags --refs https://github.com/moodle/moodle.git \
             | awk '{sub("refs/tags/", "", $2); print $2}' \
-            | grep -E '^v5\.2\.[0-9]+$' | sort -V | tail -1)
+            | awk '/^v5\.3\.[0-9]+$/' | sort -V | tail -1)
           bash scripts/release-policy.sh "$VERSION" "$NEWEST" >> "$GITHUB_OUTPUT"
 
       - name: Select PHP runtime

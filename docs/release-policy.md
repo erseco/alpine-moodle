@@ -1,7 +1,6 @@
 # Image release policy
 
-`latest` follows the newest upstream **5.2 stable** tag until the separate 5.3
-LTS promotion is approved. Beta/RC, development builds and older releases never
+`latest` follows the newest upstream **5.3 stable** tag. Beta/RC, development builds and older releases never
 publish `latest`. Automatic metadata-action `latest` generation is disabled.
 Manual builds honor `moodle_version` even when dispatched against a branch.
 
