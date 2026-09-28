@@ -51,7 +51,7 @@ esac
 
 url="https://github.com/ateeducacion/moodle/pull/${pr}.diff"
 echo "Applying SQLite patch from: $url"
-curl -fsSL "$url" -o /tmp/sqlite.diff
+curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 "$url" -o /tmp/sqlite.diff
 
 # Apply what applies; tolerate rejected cosmetic hunks (see header note 1).
 patch -d "$DIR" -p1 --forward --fuzz=3 < /tmp/sqlite.diff || true

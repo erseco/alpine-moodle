@@ -108,7 +108,7 @@ RUN if [ -n "$MOODLE_COMMIT" ]; then \
       MOODLE_URL="https://github.com/moodle/moodle/archive/refs/tags/${MOODLE_VERSION}.tar.gz"; \
     fi && \
     echo "Downloading Moodle ${MOODLE_VERSION}${MOODLE_COMMIT:+ (commit ${MOODLE_COMMIT})} from: $MOODLE_URL" && \
-    curl -fsSL "$MOODLE_URL" -o /tmp/moodle.tar.gz && \
+    curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 "$MOODLE_URL" -o /tmp/moodle.tar.gz && \
     tar xzf /tmp/moodle.tar.gz --strip-components=1 -C /usr/src/moodle && \
     rm -f /tmp/moodle.tar.gz
 
