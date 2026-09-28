@@ -40,7 +40,7 @@ that upstream will publish those exact tags. A moved existing upstream tag is
 not detected as a new tag; rebuild it explicitly if required.
 
 The CI matrix and persistent upgrade test intentionally remain pinned to the
-first 5.3 beta. Refresh those pins when adopting a new beta/RC, then the actual
+5.3 RC1 (`v5.3.0-rc1`). Refresh those pins when adopting a new beta/RC, then the actual
 stable tag, to qualify that specific version before promotion. Tag builds also
 run their own database smoke tests and exact-version publication gate.
 
