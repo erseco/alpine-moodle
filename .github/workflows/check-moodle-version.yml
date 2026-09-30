@@ -19,8 +19,12 @@ jobs:
       - name: Get Moodle tags
         id: get-moodle-tags
         run: |
-          echo "Fetching Moodle tags from GitHub API..."
-          MOODLE_TAGS=$(curl -s -H "Accept: application/vnd.github.v3+json" "https://api.github.com/repos/moodle/moodle/tags" | jq -r '.[].name')
+          # git ls-remote lists every tag; the unpaginated tags API only returned
+          # the newest 30, so LTS point releases (e.g. v4.5.13) were missed (#175).
+          # Only supported lines (4.5 LTS and 5.x+) are synced.
+          echo "Fetching Moodle tags..."
+          MOODLE_TAGS=$(git ls-remote --tags --refs https://github.com/moodle/moodle.git \
+            | sed 's#.*refs/tags/##' | grep -E '^v(4\.5|[5-9])\.' | sort -V)
           # Convert newlines to spaces for proper shell iteration
           MOODLE_TAGS_FORMATTED=$(echo "$MOODLE_TAGS" | tr '\n' ' ')
           echo "moodle_tags=$MOODLE_TAGS_FORMATTED" >> $GITHUB_ENV
