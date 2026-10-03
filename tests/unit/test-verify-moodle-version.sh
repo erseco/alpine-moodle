@@ -99,6 +99,12 @@ run_case "rc2 cannot pass as rc1" 1 v5.3.0-rc1
 run_case "RC cannot pass as stable" 1 v5.3.0
 write_release "5.3rc10 (Build: 20261001)"
 run_case "multi-digit 5.3 RC" 0 v5.3.0-rc10
+# The first release of a series is spelled "X.Y", not "X.Y.0".
+write_release "5.3 (Build: 20261005)"
+run_case "v5.3.0 vs first release 5.3" 0 v5.3.0
+run_case "first release 5.3 cannot pass as v5.3.1" 1 v5.3.1
+write_release "5.3+ (Build: 20261012)"
+run_case "v5.3.0 vs weekly 5.3+" 1 v5.3.0
 
 echo "== missing/unparseable version.php fails"
 : > "$STUB_VERSION_PHP"
