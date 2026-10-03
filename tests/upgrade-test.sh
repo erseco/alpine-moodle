@@ -12,7 +12,7 @@ cleanup() {
 }
 trap cleanup EXIT
 docker build --build-arg MOODLE_VERSION=v4.5.14 --build-arg PHP_VERSION=83 --build-arg PHP_WEBSERVER_VERSION=3.20 -t "$UPGRADE_IMAGE" .
-docker build --build-arg MOODLE_VERSION=v5.3.0-rc1 --build-arg PHP_VERSION=84 --build-arg PHP_WEBSERVER_VERSION=3.23 -t alpine-moodle-upgrade:53 .
+docker build --build-arg MOODLE_VERSION=v5.3.0 --build-arg PHP_VERSION=84 --build-arg PHP_WEBSERVER_VERSION=3.23 -t alpine-moodle-upgrade:53 .
 dc up -d app
 dc run --rm sut
 dc exec -T app php /tmp/upgrade-fixture.php seed
@@ -29,4 +29,4 @@ dc exec -T app php /var/www/html/admin/cli/cron.php --keep-alive=0
 dc restart app
 dc run --rm sut
 dc exec -T app php /tmp/upgrade-fixture.php verify
-echo 'PASS: real Moodle 4.5/PHP 8.3 -> 5.3 RC1/PHP 8.4 upgrade and restart'
+echo 'PASS: real Moodle 4.5/PHP 8.3 -> 5.3.0/PHP 8.4 upgrade and restart'

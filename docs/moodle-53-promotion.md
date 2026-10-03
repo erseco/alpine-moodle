@@ -1,11 +1,12 @@
 # Stable 5.3 promotion — release gate
 
-Keep this PR **draft** until Moodle 5.3 stable is published (target 2026-10-05).
-It includes merged #170/#171/#173 and is based on current `main`.
-This includes the Hadolint fix, serialized latest promotion and single-source
-5.3 stable policy. Promotion tests also reject a late 5.2 build after the switch.
-Do not merge merely because
-the beta tests pass.
+Upstream published `v5.3.0` and `MOODLE_503_STABLE`; the CI matrix and the
+persistent upgrade test are now pinned to that stable tag. This PR includes
+merged #170/#171/#173/#176 and is based on current `main`, with the Hadolint fix,
+serialized latest promotion and single-source 5.3 stable policy. Promotion
+tests also reject a late 5.2 build after the switch. Related:
+[moodle-playground#328](https://github.com/ateeducacion/moodle-playground/pull/328)
+adds the same `MOODLE_503_STABLE` branch to the browser playground.
 
 This change selects PHP 8.4/Alpine base 3.23 for local default builds, development,
 and Moodle 5.3+. Release CI explicitly retains PHP 8.3/base 3.20 for 4.5 and
@@ -39,9 +40,9 @@ masquerading as final. These are synthetic regression cases, not a prediction
 that upstream will publish those exact tags. A moved existing upstream tag is
 not detected as a new tag; rebuild it explicitly if required.
 
-The CI matrix and persistent upgrade test intentionally remain pinned to the
-5.3 RC1 (`v5.3.0-rc1`). Refresh those pins when adopting a new beta/RC, then the actual
-stable tag, to qualify that specific version before promotion. Tag builds also
+The CI matrix and persistent upgrade test are pinned to the 5.3 stable tag
+(`v5.3.0`). Refresh those pins when qualifying a later 5.3 point release or
+the next prerelease series. Tag builds also
 run their own database smoke tests and exact-version publication gate.
 
 After this PR is merged, the runtime mapping is:
