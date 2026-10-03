@@ -1,4 +1,4 @@
-# PHP 8.4 (opt-in)
+# PHP runtime (8.4 by default)
 
 Moodle 5.3 and newer default tags, `main` and `latest` use **PHP 8.4**.
 Moodle 4.5 and unsuffixed 5.0–5.2 tags keep **PHP 8.3**. PHP 8.4 is also available as an
@@ -12,13 +12,13 @@ Moodle 5.3 beta/RC tags use PHP 8.4 directly, without a suffix. See the
 
 ## Which tag do I pull?
 
-| Moodle version | Default tag (PHP 8.3) | Opt-in tag (PHP 8.4) |
+| Moodle version | Default tag | Opt-in tag (PHP 8.4) |
 |----------------|-----------------------|----------------------|
-| Moodle 4.5.x   | `v4.5.x`              | *(not available)*    |
-| Moodle 5.0.x   | `v5.0.x`              | `v5.0.x-php84`       |
-| Moodle 5.1.x   | `v5.1.x`              | `v5.1.x-php84`       |
-| Moodle 5.2.x   | `v5.2.x`              | `v5.2.x-php84`       |
-| Moodle 5.3 beta/RC | *(PHP 8.4 directly)* | `v5.3.0-beta` / RC tag, no suffix |
+| Moodle 4.5.x   | `v4.5.x` (PHP 8.3)    | *(not available)*    |
+| Moodle 5.0.x   | `v5.0.x` (PHP 8.3)    | `v5.0.x-php84`       |
+| Moodle 5.1.x   | `v5.1.x` (PHP 8.3)    | `v5.1.x-php84`       |
+| Moodle 5.2.x   | `v5.2.x` (PHP 8.3)    | `v5.2.x-php84`       |
+| Moodle 5.3 beta/RC | `v5.3.0-beta` / RC tag (PHP 8.4) | no suffix needed |
 | Moodle 5.3 stable | `v5.3.x` (PHP 8.4) | no suffix needed |
 
 ```bash
@@ -56,6 +56,6 @@ same environment variables, same multi-arch targets, same database support
 
 ## Default runtime policy
 
-The 5.3 LTS promotion makes PHP 8.4 the default for new releases and development.
+Since Moodle 5.3 LTS (`v5.3.0`), PHP 8.4 is the default for new releases, `latest` and development.
 Existing 4.5 and 5.0–5.2 tag runtimes remain unchanged. For a local 4.5 build, pass
 both `--build-arg PHP_VERSION=83 --build-arg PHP_WEBSERVER_VERSION=3.20`.

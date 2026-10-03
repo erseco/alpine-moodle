@@ -4,13 +4,17 @@
 ![Docker Image Size](https://img.shields.io/docker/image-size/erseco/alpine-moodle)
 ![nginx 1.26](https://img.shields.io/badge/nginx-1.26-brightgreen.svg)
 ![php 8.4](https://img.shields.io/badge/php-8.4-brightgreen.svg)
-[![php 8.4 opt-in](https://img.shields.io/badge/php-8.4_opt--in-blue.svg)](#php-84-opt-in-images)
+[![moodle 5.3 LTS](https://img.shields.io/badge/latest-moodle_5.3_LTS-blue.svg)](#php-versions)
 ![moodle](https://img.shields.io/badge/moodle-configurable-yellow)
 ![moosh 1.27](https://img.shields.io/badge/moosh-1.27-orange)
 ![License MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Build Status](https://github.com/erseco/alpine-moodle/actions/workflows/build.yml/badge.svg)
 
 A lightweight **Moodle** Docker image built on [Alpine Linux](https://alpinelinux.org/) — PHP 8.4 FPM (8.3 for legacy Moodle tags), Nginx, multi-arch, configured entirely through environment variables.
+
+> **Since `v5.3.0`, `latest` is Moodle 5.3 LTS on PHP 8.4** (it was Moodle 5.2 on
+> PHP 8.3). Moodle 4.5 LTS and 5.0–5.2 tags keep PHP 8.3; pin `v4.5.x` to stay on
+> the previous LTS. See [PHP versions](#php-versions).
 
 > 📚 **Full documentation: <https://erseco.github.io/alpine-moodle/>**
 
@@ -283,18 +287,19 @@ See the full guide, resource descriptors, security model and idempotency notes i
 - Logs to `stdout` / `stderr` — just `docker logs -f`
 - Internal cron via `runit` (configurable, or run it externally)
 
-## PHP 8.4 opt-in images
+## PHP versions
 
-Moodle **5.3 LTS and newer**, `latest` and `main` use **PHP 8.4**. Moodle **4.5 LTS** and unsuffixed **5.0–5.2** tags retain **PHP 8.3**.
+**PHP 8.4 is the default** for Moodle **5.3 LTS and newer**, `latest` and `main`.
+Moodle **4.5 LTS** and unsuffixed **5.0–5.2** tags keep **PHP 8.3**:
 
-PHP 8.4 images are available as **opt-in** tags for Moodle 5.0–5.2, identified by a `-php84` suffix. Moodle 5.3 beta/RC tags use PHP 8.4 directly, without that suffix:
+| Image tag | PHP |
+|-----------|-----|
+| `latest`, `main`, `v5.3.x` and newer (incl. beta/RC) | 8.4 |
+| `v5.0.x`, `v5.1.x`, `v5.2.x` | 8.3 |
+| `v5.0.x-php84`, `v5.1.x-php84`, `v5.2.x-php84` (opt-in) | 8.4 |
+| `v4.5.x` | 8.3 |
 
-| Moodle version | PHP 8.4 tag format |
-|----------------|--------------------|
-| Moodle 5.0.x   | `v5.0.x-php84`     |
-| Moodle 5.1.x   | `v5.1.x-php84`     |
-| Moodle 5.2.x   | `v5.2.x-php84`     |
-| Moodle 5.3 beta/RC | `v5.3.0-beta` / RC tag (no suffix) |
+For Moodle 5.0–5.2, PHP 8.4 remains available as **opt-in** tags with a `-php84` suffix:
 
 ```bash
 docker pull erseco/alpine-moodle:v5.2.1-php84
