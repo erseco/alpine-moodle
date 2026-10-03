@@ -16,7 +16,7 @@ upstream 5.3 stable tag. No historical tags are rewritten or deleted by the PR.
 Before merging:
 
 - Verify upstream's actual stable tag and its final environment.xml requirements.
-- Retarget/rebase the fork's SQLite PR onto MOODLE_503_STABLE when available.
+- Fork SQLite PR #7 now targets MOODLE_503_STABLE (rebased 2026-10-03).
 - Update the beta pin in the CI matrix and upgrade test to the stable tag; run
   all three database smoke tests and the persistent upgrade test on that tag.
 - Validate the final plugin/theme inventory in staging and a restore of the
