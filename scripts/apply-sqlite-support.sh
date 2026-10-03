@@ -98,6 +98,16 @@ esac
 if [ -n "$target" ]; then
   for envxml in "$DIR/admin/environment.xml" "$DIR/public/admin/environment.xml"; do
     [ -f "$envxml" ] || continue
+    # A new dev branch (e.g. main at 6.0dev) can predate its own block; Moodle
+    # then checks the newest block not above it, so patch that block instead.
+    target="$(awk -v t="$target" '
+      function num(v, p) { split(v, p, "."); return p[1] * 100 + p[2] }
+      /<MOODLE version="/ {
+        v = $0; sub(/.*<MOODLE version="/, "", v); sub(/".*/, "", v)
+        if (num(v) <= num(t) && (best == "" || num(v) > num(best))) best = v
+      }
+      END { print (best == "" ? t : best) }
+    ' "$envxml")"
     awk -v target="$target" '
       /<MOODLE version="/ {
         v = $0; sub(/.*<MOODLE version="/, "", v); sub(/".*/, "", v)
