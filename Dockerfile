@@ -1,17 +1,17 @@
 ARG ARCH=
-# Requires erseco/alpine-php-webserver 3.20.x with
-# https://github.com/erseco/alpine-php-webserver/pull/92 (PHP iconv linked to
+# Requires erseco/alpine-php-webserver 3.23.x with
+# https://github.com/erseco/alpine-php-webserver/pull/89 (PHP iconv linked to
 # modern GNU libiconv). That enables //TRANSLIT//IGNORE on Alpine/musl and
 # replaces the previous LD_PRELOAD + gnu-libiconv 1.15-r3 workaround for
 # https://github.com/erseco/alpine-moodle/issues/26.
-# Pin major.minor so we track the latest 3.20.x patch (3.20.11+, e.g. 3.20.12).
-ARG PHP_WEBSERVER_VERSION=3.20
+# Release CI explicitly selects 3.20/PHP 8.3 for legacy Moodle tags.
+ARG PHP_WEBSERVER_VERSION=3.23
 FROM ${ARCH}erseco/alpine-php-webserver:${PHP_WEBSERVER_VERSION}
 
 LABEL maintainer="Ernesto Serrano <info@ernesto.es>"
 
 USER root
-ARG PHP_VERSION=83
+ARG PHP_VERSION=84
 RUN case "$PHP_VERSION" in 83|84) ;; *) echo 'Unsupported PHP runtime' >&2; exit 1 ;; esac \
     && apk add --no-cache composer patch rsync php${PHP_VERSION}-posix php${PHP_VERSION}-xmlwriter php${PHP_VERSION}-pecl-redis \
     php${PHP_VERSION}-ldap php${PHP_VERSION}-pecl-igbinary php${PHP_VERSION}-exif php${PHP_VERSION}-sqlite3 php${PHP_VERSION}-pdo_sqlite \

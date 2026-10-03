@@ -8,7 +8,7 @@
 # SQLite support comes from out-of-tree patches in ateeducacion/moodle, each
 # targeting its own stable branch so the diff stays applicable as branches move:
 #   main    -> PR #1 (targets main;              adds the driver)
-#   v5.3.x  -> PR #7 (targets the 5.3 beta baseline until upstream branches)
+#   v5.3.x  -> PR #7 (targets MOODLE_503_STABLE; adds the driver)
 #   v5.2.x  -> PR #5 (targets MOODLE_502_STABLE; adds the driver)
 #   v5.1.x  -> PR #2 (targets MOODLE_501_STABLE; adds the driver)
 #   v5.0.x  -> PR #3 (targets MOODLE_500_STABLE; adds the driver)
@@ -38,7 +38,7 @@ DIR="${MOODLE_DIR:-/var/www/html}"
 
 case "$MOODLE_VERSION" in
   main)  pr=1 ;;
-  v5.3.*) pr=7 ;; # Dedicated beta/stable 5.3 patch; independent of upstream main.
+  v5.3.*) pr=7 ;;
   v5.2*) pr=5 ;;
   v5.1*) pr=2 ;;
   v5.0*) pr=3 ;;
@@ -98,6 +98,16 @@ esac
 if [ -n "$target" ]; then
   for envxml in "$DIR/admin/environment.xml" "$DIR/public/admin/environment.xml"; do
     [ -f "$envxml" ] || continue
+    # A new dev branch (e.g. main at 6.0dev) can predate its own block; Moodle
+    # then checks the newest block not above it, so patch that block instead.
+    target="$(awk -v t="$target" '
+      function num(v, p) { split(v, p, "."); return p[1] * 100 + p[2] }
+      /<MOODLE version="/ {
+        v = $0; sub(/.*<MOODLE version="/, "", v); sub(/".*/, "", v)
+        if (num(v) <= num(t) && (best == "" || num(v) > num(best))) best = v
+      }
+      END { print (best == "" ? t : best) }
+    ' "$envxml")"
     awk -v target="$target" '
       /<MOODLE version="/ {
         v = $0; sub(/.*<MOODLE version="/, "", v); sub(/".*/, "", v)

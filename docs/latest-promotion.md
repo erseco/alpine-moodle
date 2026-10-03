@@ -7,8 +7,8 @@ release checks pass, an eligible stable build enters a separate promotion job.
 The job holds the repository-wide `moodle-latest-promotion` concurrency lock
 and checks out **current `main` policy**, then queries upstream again. Only
 the newest stable patch in the selected production line may promote. Currently
-that line is **5.2**; change `stable_pattern` in `scripts/release-policy.sh` to
-5.3 only when the stable LTS promotion gates are satisfied. Beta, RC, `main`,
+that line is **5.3 LTS**, selected by `stable_pattern` in `scripts/release-policy.sh`.
+Merge this promotion only when the stable LTS gates are satisfied. Beta, RC, `main`,
 older patches and other series cannot replace `latest`.
 
 `docker buildx imagetools create` copies the successful build's immutable
@@ -28,10 +28,8 @@ the previous `latest` remains until it does.
   old workflows to finish first: historical workflow definitions cannot acquire
   the new lock automatically. Do not rerun historical tag workflows to publish.
 - To rebuild an existing release using current policy, dispatch **buildx** on
-  **main**, supplying `moodle_version` (for example `v5.2.3` only while it is the
-  newest upstream 5.2 patch). Historical Git tags are not rewritten.
-- Keep the future 5.3 promotion PR aligned with this helper; remove its old
-  duplicated tag regex from the workflow when rebasing.
+  **main**, supplying `moodle_version` (the newest upstream 5.3 stable patch).
+  Historical Git tags are not rewritten.
 - Compare `docker buildx imagetools inspect erseco/alpine-moodle:latest` and
   `docker buildx imagetools inspect ghcr.io/erseco/alpine-moodle:latest` with the
   successful build's digest after rollout. This PR does not publish images.
