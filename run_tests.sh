@@ -19,7 +19,8 @@ set -eu
 #     Moodle-context regression test for the core_configrw and core_router
 #     status checks (#168). Must run INSIDE the `app` container. Asserts that
 #     every config.php Moodle looks at is read-only and — on 5.1+ layouts —
-#     that nginx really routes unmatched requests to public/r.php.
+#     that nginx really routes unmatched requests to public/r.php (including
+#     the .js ES modules Moodle 5.3+ serves from /core/esm/, #178).
 #
 #   MODE=sync
 #     Moodle-context regression test for 010-sync-moodle-code.sh (#103, #161).
@@ -258,8 +259,9 @@ run_checks_smoke_test() {
 
   if [ -f /var/www/html/public/r.php ]; then
     if grep -q 'try_files $uri $uri/ /r.php' /etc/nginx/nginx.conf &&
-       grep -q 'try_files $fastcgi_script_name' /etc/nginx/nginx.conf; then
-      echo "OK:   nginx falls back to r.php for missing files and missing .php scripts."
+       grep -q 'try_files $fastcgi_script_name' /etc/nginx/nginx.conf &&
+       grep -q 'try_files $uri /r.php' /etc/nginx/nginx.conf; then
+      echo "OK:   nginx falls back to r.php for missing files, static files and .php scripts."
     else
       echo "FAIL: nginx does not route unmatched requests to r.php."
       fail=1
@@ -270,6 +272,20 @@ run_checks_smoke_test() {
     else
       echo "FAIL: \$CFG->routerconfigured is missing from config.php."
       fail=1
+    fi
+
+    # Moodle 5.3+ serves ES modules through the router (#178). Specifiers that
+    # end in .js used to hit the static-file location and 404 instead. Gated on
+    # the bundle itself: 5.2 already has the ESM route but no bootstrap module.
+    if [ -f /var/www/html/lib/bundles/bootstrap/js/bootstrap.js ]; then
+      esm_url="${SITE_URL%/}/core/esm/1/bootstrap/bootstrap.js"
+      esm_status="$(curl --silent --output /dev/null --write-out '%{http_code}' "$esm_url" || true)"
+      if [ "$esm_status" = "200" ]; then
+        echo "OK:   $esm_url is served by r.php."
+      else
+        echo "FAIL: $esm_url returned HTTP $esm_status; .js ES modules do not reach r.php."
+        fail=1
+      fi
     fi
   else
     echo "SKIP: pre-5.1 layout, no public/r.php; router checks do not apply."
