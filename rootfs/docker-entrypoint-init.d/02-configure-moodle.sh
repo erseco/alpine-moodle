@@ -357,6 +357,10 @@ final_configurations() {
 #     (the part before PATH_INFO) keeps /theme/image.php/<theme>/... working,
 #     but try_files rewrites $uri and drops the path info, so it is stashed in
 #     $path_info beforehand and passed from there.
+#   * missing static files (.js, .css, .png…) must reach r.php too: the base
+#     image serves them from a regex location that 404s on anything not on
+#     disk, and Moodle 5.3 serves ES modules such as
+#     /core/esm/<rev>/bootstrap/bootstrap.js through the router (#178).
 # This mirrors the config published at https://docs.moodle.org/en/Nginx — see
 # also https://docs.moodle.org/en/Configuring_the_Router
 # The edits are guarded so a container restart does not apply them twice.
@@ -371,8 +375,13 @@ configure_nginx_router() {
             /etc/nginx/nginx.conf
     fi
 
+    if ! grep -q 'try_files $uri /r.php' /etc/nginx/nginx.conf; then
+        sed -i '/location ~\* \\\.(jpg|/a\            try_files $uri /r.php$is_args$args;' /etc/nginx/nginx.conf
+    fi
+
     if grep -q 'try_files $uri $uri/ /r.php' /etc/nginx/nginx.conf &&
        grep -q 'try_files $fastcgi_script_name' /etc/nginx/nginx.conf &&
+       grep -q 'try_files $uri /r.php' /etc/nginx/nginx.conf &&
        grep -q 'fastcgi_param PATH_INFO $path_info;' /etc/nginx/nginx.conf; then
         MOODLE_ROUTER_CONFIGURED=true
         echo "nginx configured to route unmatched requests to public/r.php."

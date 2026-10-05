@@ -248,6 +248,18 @@ docker compose exec moodle ls -l /var/www/html/config.php /var/www/html/public/c
 
 **Fix**: Update to a current image and restart the container — the entrypoint rewrites the nginx fallback to `r.php` and sets `$CFG->routerconfigured` itself, but only after confirming nginx really was reconfigured. Do **not** add `$CFG->routerconfigured = true;` by hand on an older image: it silences the check without fixing the routing, and Moodle will then report the individual route failures instead.
 
+## UI broken after upgrading to Moodle 5.3: 404 on `/core/esm/…/bootstrap.js`
+
+**Symptoms**: Pages render, but menus, dropdowns, the primary navigation and the Timeline block do not work. The browser console shows `Failed to fetch dynamically imported module: …/core/esm/<rev>/bootstrap/bootstrap.js`, and the container logs show nginx `open() "/var/www/html/public/core/esm/…" failed`.
+
+**Cause**: Moodle 5.3 serves ES modules through its router (`public/r.php`). Older images served every `.js`/`.css`/image URL from disk and answered 404 when no file existed, so the module specifiers that end in `.js` never reached Moodle. The 404 came with Moodle's one-year `immutable` cache headers, so browsers keep the broken response even after the server is fixed. Related: [#178](https://github.com/erseco/alpine-moodle/issues/178).
+
+**Fix**: Update to a current image, then purge the JavaScript caches once. This changes the module URLs, so browsers stop using the cached 404s:
+
+```bash
+docker compose exec moodle php admin/cli/purge_caches.php --js
+```
+
 ## Where to find Moodle debug output
 
 Enable developer debug mode in the container:
