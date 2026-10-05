@@ -275,8 +275,9 @@ run_checks_smoke_test() {
     fi
 
     # Moodle 5.3+ serves ES modules through the router (#178). Specifiers that
-    # end in .js used to hit the static-file location and 404 instead.
-    if [ -f /var/www/html/public/lib/classes/route/controller/esm_controller.php ]; then
+    # end in .js used to hit the static-file location and 404 instead. Gated on
+    # the bundle itself: 5.2 already has the ESM route but no bootstrap module.
+    if [ -f /var/www/html/lib/bundles/bootstrap/js/bootstrap.js ]; then
       esm_url="${SITE_URL%/}/core/esm/1/bootstrap/bootstrap.js"
       esm_status="$(curl --silent --output /dev/null --write-out '%{http_code}' "$esm_url" || true)"
       if [ "$esm_status" = "200" ]; then
