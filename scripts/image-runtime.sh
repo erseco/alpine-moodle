@@ -11,7 +11,9 @@ if [[ "$runtime" == auto ]]; then
 fi
 case "$version:$runtime" in v4.*:84) echo 'Moodle 4.x requires PHP 8.3' >&2; exit 1 ;; esac
 case "$runtime" in
-  83) base=3.20 ;;
+  # Alpine 3.20 is EOL (no PHP security fixes): PHP 8.3 comes from the
+  # alpine-php-webserver -php83 variant on Alpine 3.24 (#180).
+  83) base=3.24-php83 ;;
   84) base=3.23 ;;
   *) echo "Unsupported PHP runtime: $runtime" >&2; exit 1 ;;
 esac

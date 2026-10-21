@@ -4,16 +4,19 @@ ARG ARCH=
 # modern GNU libiconv). That enables //TRANSLIT//IGNORE on Alpine/musl and
 # replaces the previous LD_PRELOAD + gnu-libiconv 1.15-r3 workaround for
 # https://github.com/erseco/alpine-moodle/issues/26.
-# Release CI explicitly selects 3.20/PHP 8.3 for legacy Moodle tags.
+# Release CI explicitly selects 3.24-php83 (PHP 8.3 on Alpine 3.24) for Moodle 4.5–5.2.
 ARG PHP_WEBSERVER_VERSION=3.23
 FROM ${ARCH}erseco/alpine-php-webserver:${PHP_WEBSERVER_VERSION}
 
 LABEL maintainer="Ernesto Serrano <info@ernesto.es>"
 
 USER root
+# Composer comes from the official image: on the 3.24-php83 base, Alpine's
+# composer package depends on php85 and would repoint /usr/bin/php.
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 ARG PHP_VERSION=84
 RUN case "$PHP_VERSION" in 83|84) ;; *) echo 'Unsupported PHP runtime' >&2; exit 1 ;; esac \
-    && apk add --no-cache composer patch rsync php${PHP_VERSION}-posix php${PHP_VERSION}-xmlwriter php${PHP_VERSION}-pecl-redis \
+    && apk add --no-cache patch rsync php${PHP_VERSION}-posix php${PHP_VERSION}-xmlwriter php${PHP_VERSION}-pecl-redis \
     php${PHP_VERSION}-ldap php${PHP_VERSION}-pecl-igbinary php${PHP_VERSION}-exif php${PHP_VERSION}-sqlite3 php${PHP_VERSION}-pdo_sqlite \
     # php83-zip provides ZipArchive, used by the Moodle blueprint runner for
     # safe bundle/plugin extraction.
