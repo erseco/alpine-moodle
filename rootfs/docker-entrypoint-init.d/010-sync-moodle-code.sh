@@ -238,6 +238,21 @@ done
 #     plugins of a pre-5.1 volume (mod/forum → public/mod/forum) are not
 #     misdetected as third-party during a public/-layout upgrade.
 : > "${tmpdir}/auto-paths"
+# A removed bundled plugin is not a third-party plugin. Use the target
+# release's own manifest, without bootstrapping Moodle against the old DB.
+# In 5.3, restoring qtype_random from 4.5 prevents Moodle from bootstrapping.
+: > "${tmpdir}/deleted-plugins"
+if [ -f "${MOODLE_SRC_DIR}/lib/plugins.json" ] && [ -f "${MOODLE_SRC_DIR}/lib/components.json" ]; then
+  php -r '
+    $plugins = json_decode(file_get_contents($argv[1] . "/lib/plugins.json"), true, 512, JSON_THROW_ON_ERROR);
+    $components = json_decode(file_get_contents($argv[1] . "/lib/components.json"), true, 512, JSON_THROW_ON_ERROR);
+    foreach ($plugins["deleted"] ?? [] as $type => $names) {
+        $directory = $components["plugintypes"][$type] ?? null;
+        if ($directory === null) { continue; }
+        foreach ($names as $name) { echo "$directory/$name\n"; }
+    }
+  ' "$MOODLE_SRC_DIR" > "${tmpdir}/deleted-plugins"
+fi
 if [ "$PRESERVE_PLUGINS" = "true" ] && [ "$html_has_code" = "yes" ]; then
   find "$MOODLE_HTML_DIR" -mindepth 2 -maxdepth 8 -type f -name version.php 2>/dev/null \
     | sort > "${tmpdir}/version-files"
@@ -246,6 +261,12 @@ if [ "$PRESERVE_PLUGINS" = "true" ] && [ "$html_has_code" = "yes" ]; then
     reldir="$(dirname "$reldir")"
     case "$reldir" in .|public) continue ;; esac
     if is_ignored_plugin_dir "$reldir"; then
+      continue
+    fi
+    if awk -v dir="$(translate_layout_path "$reldir")" \
+      '$0 == dir || index(dir, $0 "/") == 1 { found = 1 } END { exit !found }' \
+      "${tmpdir}/deleted-plugins"; then
+      echo "  removing retired core plugin ${reldir}"
       continue
     fi
     if [ -d "${MOODLE_SRC_DIR}/$(translate_layout_path "$reldir")" ]; then

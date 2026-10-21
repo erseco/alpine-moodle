@@ -9,10 +9,10 @@
 #   EXPECTED  vX.Y.Z git tag, or "main" for main-branch snapshots
 #
 # Stable tags (vX.Y.Z) must match version.php's $release exactly
-# ("X.Y.Z (Build: ...)" — a weekly "X.Y.Z+" does NOT pass). Pre-release tags
-# (v5.2.0-rc1, v5.2.0-beta) and main only require a parseable release, since
-# upstream's pre-release $release strings ("5.2rc1") don't map 1:1 to tag
-# names.
+# ("X.Y.Z (Build: ...)", or "X.Y (Build: ...)" for vX.Y.0 — a weekly "X.Y.Z+"
+# does NOT pass). Pre-release tags
+# (v5.2.0-rc1, v5.2.0-beta) are normalized to Moodle's release spelling
+# ("5.2rc1", "5.2beta"); main only requires a parseable release.
 set -eu
 
 IMAGE="${1:?usage: verify-moodle-version.sh IMAGE vX.Y.Z|main}"
@@ -34,13 +34,22 @@ fi
 echo "Image $IMAGE contains Moodle release: $release"
 
 case "$EXPECTED" in
-  main|*-rc*|*-beta*)
+  main)
     echo "OK: no strict release match required for '$EXPECTED' builds."
+    ;;
+  *-rc*|*-beta*)
+    want=$(printf '%s' "$EXPECTED" | sed -E 's/^v//; s/\.0-(beta|rc)/\1/')
+    case "$release" in
+      "$want"|"$want "*) echo "OK: prerelease matches $EXPECTED." ;;
+      *) echo "ERROR: prerelease '$release' does not match $EXPECTED" >&2; exit 1 ;;
+    esac
     ;;
   v*.*.*)
     want="${EXPECTED#v}"
+    # Moodle spells the first release of a series "X.Y", not "X.Y.0".
+    first="${want%.0}"
     case "$release" in
-      "$want"|"$want "*)
+      "$want"|"$want "*|"$first "*)
         echo "OK: release matches tag $EXPECTED."
         ;;
       *)

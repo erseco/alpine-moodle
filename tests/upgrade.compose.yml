@@ -1,0 +1,29 @@
+services:
+  app:
+    image: ${UPGRADE_IMAGE:?set UPGRADE_IMAGE}
+    environment:
+      SITE_URL: http://app:8080
+    volumes:
+      - html:/var/www/html
+      - data:/var/www/moodledata
+      - ../run_tests.sh:/tmp/run_tests.sh:ro
+      - ./upgrade-fixture.php:/tmp/upgrade-fixture.php:ro
+    depends_on:
+      - postgres
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_PASSWORD: moodle
+      POSTGRES_USER: moodle
+      POSTGRES_DB: moodle
+    volumes:
+      - db:/var/lib/postgresql/data
+  sut:
+    image: alpine:latest
+    command: /tmp/run_tests.sh
+    volumes:
+      - ../run_tests.sh:/tmp/run_tests.sh:ro
+volumes:
+  html:
+  data:
+  db:

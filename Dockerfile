@@ -1,28 +1,27 @@
-ARG ARCH=
-# PHP 8.4 variant: this branch builds the -php84 image line (Moodle 5.x and later).
-# Pin to the erseco/alpine-php-webserver tag whose Alpine base *defaults* to PHP 8.4,
-# so `composer` and the php84-* extensions resolve against the same PHP runtime.
-# 3.23 = FROM alpine:3.23 (ships php84 and an unversioned /usr/bin/php -> php84).
-# Do NOT use 3.24: alpine:3.24 defaults to php85, so its `composer` runs on php85 and
-# fails against the php84-* extensions installed below.
-#
-# Requires erseco/alpine-php-webserver 3.23.x with
+# Requires erseco/alpine-php-webserver 3.23.x or later with
 # https://github.com/erseco/alpine-php-webserver/pull/89 (PHP iconv linked to
-# modern GNU libiconv; first good rebuild: 3.23.4-1). That enables
-# //TRANSLIT//IGNORE on Alpine/musl and replaces the previous LD_PRELOAD +
-# gnu-libiconv 1.15-r3 workaround for https://github.com/erseco/alpine-moodle/issues/26.
-# Pin major.minor so we track the latest 3.23.x rebuild (3.23.4-1, 3.23.5, …).
-ARG PHP_WEBSERVER_VERSION=3.23
-FROM ${ARCH}erseco/alpine-php-webserver:${PHP_WEBSERVER_VERSION}
+# modern GNU libiconv). That enables //TRANSLIT//IGNORE on Alpine/musl and
+# replaces the previous LD_PRELOAD + gnu-libiconv 1.15-r3 workaround for
+# https://github.com/erseco/alpine-moodle/issues/26.
+# Release CI selects 3.24-php83 (PHP 8.3) for Moodle 4.5–5.2 and 3.24-php84
+# (PHP 8.4) for 5.3 and later, both on Alpine 3.24.
+ARG PHP_WEBSERVER_VERSION=3.24-php84
+FROM ghcr.io/erseco/alpine-php-webserver:${PHP_WEBSERVER_VERSION}
 
 LABEL maintainer="Ernesto Serrano <info@ernesto.es>"
 
 USER root
-RUN apk add --no-cache composer patch rsync php84-posix php84-xmlwriter php84-pecl-redis \
-    php84-ldap php84-pecl-igbinary php84-exif php84-sqlite3 php84-pdo_sqlite \
-    # php84-zip provides ZipArchive, used by the Moodle blueprint runner for
+# Composer comes from the official image: on the 3.24-php83 base, Alpine's
+# composer package depends on php85 and would repoint /usr/bin/php.
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+ARG PHP_VERSION=84
+RUN case "$PHP_VERSION" in 83|84) ;; *) echo 'Unsupported PHP runtime' >&2; exit 1 ;; esac \
+    && apk add --no-cache patch rsync php${PHP_VERSION}-posix php${PHP_VERSION}-xmlwriter php${PHP_VERSION}-pecl-redis \
+    php${PHP_VERSION}-ldap php${PHP_VERSION}-pecl-igbinary php${PHP_VERSION}-exif php${PHP_VERSION}-sqlite3 php${PHP_VERSION}-pdo_sqlite \
+    # php83-zip provides ZipArchive, used by the Moodle blueprint runner for
     # safe bundle/plugin extraction.
-    php84-zip \
+    php${PHP_VERSION}-zip \
+    && test "$(php -r 'echo PHP_MAJOR_VERSION, PHP_MINOR_VERSION;')" = "$PHP_VERSION" \
     # Remove alpine cache
     && rm -rf /var/cache/apk/* \
     # Immutable Moodle source tree used by 010-sync-moodle-code.sh to refresh
@@ -34,11 +33,12 @@ USER nobody
 
 # Moodle version configuration
 ARG MOODLE_VERSION=main
-# Exact moodle/moodle commit for the download below. CI (build-php84.yml)
-# resolves it from MOODLE_VERSION with git ls-remote, so the download layer's
-# cache key changes whenever upstream moves — without it, BuildKit reused a
-# months-old cached "main" snapshot (#161). Optional for local builds: when
-# empty, the ref name is downloaded directly.
+RUN case "$MOODLE_VERSION:$PHP_VERSION" in v4.*:84) echo 'Moodle 4.x does not support PHP 8.4' >&2; exit 1 ;; esac
+# Exact moodle/moodle commit for the download below. CI (build.yml) resolves
+# it from MOODLE_VERSION with git ls-remote, so the download layer's cache key
+# changes whenever upstream moves — without it, BuildKit reused a months-old
+# cached "main" snapshot in every :main/:beta image (#161). Optional for local
+# builds: when empty, the ref name is downloaded directly.
 ARG MOODLE_COMMIT=
 
 # Set default environment variables
@@ -111,7 +111,7 @@ RUN if [ -n "$MOODLE_COMMIT" ]; then \
       MOODLE_URL="https://github.com/moodle/moodle/archive/refs/tags/${MOODLE_VERSION}.tar.gz"; \
     fi && \
     echo "Downloading Moodle ${MOODLE_VERSION}${MOODLE_COMMIT:+ (commit ${MOODLE_COMMIT})} from: $MOODLE_URL" && \
-    curl -fsSL "$MOODLE_URL" -o /tmp/moodle.tar.gz && \
+    curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 "$MOODLE_URL" -o /tmp/moodle.tar.gz && \
     tar xzf /tmp/moodle.tar.gz --strip-components=1 -C /usr/src/moodle && \
     rm -f /tmp/moodle.tar.gz
 

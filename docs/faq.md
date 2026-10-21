@@ -62,11 +62,11 @@ Yes — set `AUTO_UPDATE_MOODLE=false`. The container will start without running
 
 ## Can I run Moodle on PHP 8.4?
 
-Yes, for **Moodle 5.x and later**, via the opt-in `-php84` tags (e.g. `erseco/alpine-moodle:v5.2.1-php84`). The default tags stay on **PHP 8.3** so Moodle 4.5 LTS keeps working — there are no `-php84` images for the 4.x line. See [PHP 8.4 (opt-in)](php84.md) for the full tag list and details.
+Yes. **Moodle 5.3+** uses PHP 8.4 by default. **5.0–5.2** offers opt-in `-php84` tags; their unsuffixed tags and **4.5** stay on PHP 8.3. There are no PHP 8.4 images for 4.x. See [PHP runtime policy](php84.md).
 
 ## Does the image include Redis / PostgreSQL / MariaDB?
 
-No. The image only contains Moodle, PHP (8.3 by default, or 8.4 on the opt-in [`-php84` tags](php84.md)), Nginx, Moosh and supporting tools. External services (database, Redis) must run in their own containers. See [Docker Compose](docker-compose.md) for ready-made stacks.
+No. The image only contains Moodle, PHP ([version by Moodle line](php84.md)), Nginx, Moosh and supporting tools. External services (database, Redis) must run in their own containers. See [Docker Compose](docker-compose.md) for ready-made stacks.
 
 ## Can I mount my own `config.php`?
 

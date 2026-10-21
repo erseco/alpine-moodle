@@ -3,8 +3,8 @@
 How to move between Moodle versions safely.
 
 !!! tip "Moving to Moodle 5.x? PHP 8.4 is available"
-    Once you are on Moodle 5.x you can optionally switch to the PHP 8.4 image line by
-    pulling the `-php84` tag (e.g. `v5.2.1-php84`). The default tags stay on PHP 8.3.
+    Moodle 5.3+ uses PHP 8.4 by default. For 5.0–5.2, opt in using the `-php84`
+    tag (e.g. `v5.2.1-php84`). Moodle 4.5 retains PHP 8.3.
     See [PHP 8.4 (opt-in)](php84.md). Do **not** use `-php84` tags on Moodle 4.x.
 
 ## The basics
@@ -145,4 +145,7 @@ docker compose exec moodle php admin/cli/maintenance.php --disable
 
 ## Skipping versions
 
-Moodle's upgrade scripts support skipping minor versions but you should not jump across multiple major versions in one go. Upgrade step by step (for example `4.1 → 4.5 → 5.0 → 5.1`), backing up between each step.
+Follow the target release's minimum supported source version. Moodle 5.3 supports
+upgrading directly from 4.5; intermediate 5.0/5.1/5.2 upgrades are not required.
+Test the database requirements and actual plugins on a restored staging copy,
+and back up both the database and files. See [the 5.3 migration plan](moodle-53-migration.md).

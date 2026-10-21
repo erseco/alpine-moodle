@@ -194,6 +194,8 @@ jobs:
       - name: Test (PostgreSQL)
         env:
           MOODLE_VERSION: ${{ steps.params.outputs.moodle_version }}
+          PHP_VERSION: '84'
+          PHP_WEBSERVER_VERSION: 3.24-php84
         run: |
           docker compose version
           docker compose --file docker-compose.test.yml up --exit-code-from sut --timeout 10 --build
@@ -201,12 +203,16 @@ jobs:
       - name: Test (MariaDB)
         env:
           MOODLE_VERSION: ${{ steps.params.outputs.moodle_version }}
+          PHP_VERSION: '84'
+          PHP_WEBSERVER_VERSION: 3.24-php84
         run: |
           docker compose --file docker-compose.test.mariadb.yml up --exit-code-from sut --timeout 10 --build
 
       - name: Test (SQLite)
         env:
           MOODLE_VERSION: ${{ steps.params.outputs.moodle_version }}
+          PHP_VERSION: '84'
+          PHP_WEBSERVER_VERSION: 3.24-php84
         run: |
           docker compose --file docker-compose.test.sqlite.yml up --exit-code-from sut --timeout 10 --build
 
@@ -219,6 +225,8 @@ jobs:
           docker buildx build --load \
             --build-arg MOODLE_VERSION=${{ steps.params.outputs.moodle_version }} \
             --build-arg MOODLE_COMMIT=${{ steps.params.outputs.moodle_commit }} \
+            --build-arg PHP_VERSION=84 \
+            --build-arg PHP_WEBSERVER_VERSION=3.24-php84 \
             -t alpine-moodle:verify .
           ./tests/verify-moodle-version.sh alpine-moodle:verify "${{ steps.params.outputs.moodle_version }}"
 
@@ -233,6 +241,8 @@ jobs:
           build-args: |
             MOODLE_VERSION=${{ steps.params.outputs.moodle_version }}
             MOODLE_COMMIT=${{ steps.params.outputs.moodle_commit }}
+            PHP_VERSION=84
+            PHP_WEBSERVER_VERSION=3.24-php84
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

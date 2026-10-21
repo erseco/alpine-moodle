@@ -18,24 +18,49 @@ on:
 jobs:
   buildx:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.policy.outputs.version }}
+      latest: ${{ steps.policy.outputs.latest }}
+      digest: ${{ steps.push.outputs.digest }}
     steps:
       # Step 1: Checkout the code
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Resolve release policy
+        id: policy
+        env:
+          REQUESTED_VERSION: ${{ inputs.moodle_version }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+            VERSION="$REQUESTED_VERSION"
+          elif [[ "$GITHUB_REF_TYPE" == tag ]]; then
+            VERSION="$GITHUB_REF_NAME"
+          else
+            VERSION=main
+          fi
+          NEWEST=$(bash scripts/release-policy.sh --newest)
+          bash scripts/release-policy.sh "$VERSION" "$NEWEST" >> "$GITHUB_OUTPUT"
+
+      - name: Select PHP runtime
+        id: runtime
+        env:
+          VERSION: ${{ steps.policy.outputs.version }}
+        run: bash scripts/image-runtime.sh "$VERSION" >> "$GITHUB_OUTPUT"
 
       # Step 2: Extract metadata for Docker
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v6
         with:
+          flavor: latest=false
           images: |
             ${{ github.repository }}
             ghcr.io/${{ github.repository }}
           tags: |
-            type=ref,event=tag
-            type=raw,value=latest,enable=${{ github.ref_type == 'tag' }}
-            type=raw,value=main,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=beta,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=${{ steps.policy.outputs.version }}
+            type=raw,value=beta,enable=${{ steps.policy.outputs.version == 'main' }}
 
       # Step 3: Set up QEMU for multi-platform builds
       - name: Set up QEMU
@@ -69,7 +94,7 @@ jobs:
 
       # Step 6: Lint Dockerfile
       - name: Hadolint Action
-        uses: hadolint/hadolint-action@v3.3.0
+        uses: hadolint/hadolint-action@v3.5.0
         with:
           format: sarif
           output-file: hadolint-results.sarif
@@ -88,13 +113,13 @@ jobs:
       # the build early when a tag does not exist in moodle/moodle.
       - name: Determine Moodle version
         id: moodle_version
+        env:
+          VERSION: ${{ steps.policy.outputs.version }}
         run: |
-          if [[ $GITHUB_REF == refs/tags/* ]]; then
-            VERSION=${GITHUB_REF#refs/tags/}
-            REF="refs/tags/${VERSION}"
-          else
-            VERSION=main
+          if [[ "$VERSION" == main ]]; then
             REF="refs/heads/main"
+          else
+            REF="refs/tags/${VERSION}"
           fi
           # tail -1: for annotated tags the peeled ^{} line (the commit) sorts last.
           COMMIT=$(git ls-remote https://github.com/moodle/moodle.git "$REF" "${REF}^{}" | tail -n 1 | cut -f1)
@@ -103,8 +128,8 @@ jobs:
             exit 1
           fi
           echo "Resolved ${VERSION} -> ${COMMIT}"
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "commit=${COMMIT}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "commit=${COMMIT}" >> "$GITHUB_OUTPUT"
 
       # Fast, docker-free coverage of the shell helpers (#103, #161).
       - name: Unit tests (shell scripts)
@@ -123,10 +148,13 @@ jobs:
           docker buildx build --load \
             --build-arg MOODLE_VERSION=${{ steps.moodle_version.outputs.version }} \
             --build-arg MOODLE_COMMIT=${{ steps.moodle_version.outputs.commit }} \
+            --build-arg PHP_VERSION=${{ steps.runtime.outputs.php }} \
+            --build-arg PHP_WEBSERVER_VERSION=${{ steps.runtime.outputs.base }} \
             .
 
       # Steps 9x: Functional tests (HTTP web check + Moodle-context moosh smoke
-      # + code-sync regression) via the shared orchestrator tests/compose-test.sh.
+      # + status-check + code-sync regression) via the shared orchestrator
+      # tests/compose-test.sh.
       # On pull requests the dedicated moodle-matrix workflow already runs these
       # across every supported Moodle version, so here they run only on
       # push/dispatch as a release smoke test. They test the Moodle version
@@ -136,18 +164,24 @@ jobs:
         if: github.event_name != 'pull_request'
         env:
           MOODLE_VERSION: ${{ steps.moodle_version.outputs.version }}
+          PHP_VERSION: ${{ steps.runtime.outputs.php }}
+          PHP_WEBSERVER_VERSION: ${{ steps.runtime.outputs.base }}
         run: ./tests/compose-test.sh docker-compose.test.yml
 
       - name: Test (MariaDB)
         if: github.event_name != 'pull_request'
         env:
           MOODLE_VERSION: ${{ steps.moodle_version.outputs.version }}
+          PHP_VERSION: ${{ steps.runtime.outputs.php }}
+          PHP_WEBSERVER_VERSION: ${{ steps.runtime.outputs.base }}
         run: ./tests/compose-test.sh docker-compose.test.mariadb.yml
 
       - name: Test (SQLite)
         if: github.event_name != 'pull_request'
         env:
           MOODLE_VERSION: ${{ steps.moodle_version.outputs.version }}
+          PHP_VERSION: ${{ steps.runtime.outputs.php }}
+          PHP_WEBSERVER_VERSION: ${{ steps.runtime.outputs.base }}
         run: ./tests/compose-test.sh docker-compose.test.sqlite.yml
 
       # Step 10: Release gate (#161). Build the amd64 image locally and assert
@@ -160,21 +194,26 @@ jobs:
           docker buildx build --load \
             --build-arg MOODLE_VERSION=${{ steps.moodle_version.outputs.version }} \
             --build-arg MOODLE_COMMIT=${{ steps.moodle_version.outputs.commit }} \
+            --build-arg PHP_VERSION=${{ steps.runtime.outputs.php }} \
+            --build-arg PHP_WEBSERVER_VERSION=${{ steps.runtime.outputs.base }} \
             -t alpine-moodle:verify .
           ./tests/verify-moodle-version.sh alpine-moodle:verify "${{ steps.moodle_version.outputs.version }}"
 
       # Step 11: Build and Push to both registries in a single step
       - name: Build and push
+        id: push
         if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v7
         with:
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          platforms: linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/386,linux/ppc64le,linux/s390x
+          platforms: linux/amd64,linux/arm64,linux/ppc64le,linux/s390x
           build-args: |
             MOODLE_VERSION=${{ steps.moodle_version.outputs.version }}
             MOODLE_COMMIT=${{ steps.moodle_version.outputs.commit }}
+            PHP_VERSION=${{ steps.runtime.outputs.php }}
+            PHP_WEBSERVER_VERSION=${{ steps.runtime.outputs.base }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -199,3 +238,36 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
           short-description: ${{ github.event.repository.description }}
+
+  promote-latest:
+    needs: buildx
+    if: github.event_name != 'pull_request' && needs.buildx.outputs.latest == 'true'
+    runs-on: ubuntu-latest
+    # Serialize promotions without dropping a newer release behind a late old build.
+    concurrency:
+      group: moodle-latest-promotion
+      queue: max
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # A late build must use today's policy, not the policy at its old tag.
+          ref: main
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Recheck stable release and promote exact multi-arch digest
+        env:
+          VERSION: ${{ needs.buildx.outputs.version }}
+          DIGEST: ${{ needs.buildx.outputs.digest }}
+          REPOSITORY: ${{ github.repository }}
+        run: bash scripts/promote-latest.sh "$VERSION" "$DIGEST" "$REPOSITORY"
