@@ -11,7 +11,7 @@ services:
     depends_on:
       - postgres
   postgres:
-    image: mirror.gcr.io/library/postgres:17-alpine
+    image: postgres:17-alpine
     environment:
       POSTGRES_PASSWORD: moodle
       POSTGRES_USER: moodle
@@ -19,7 +19,7 @@ services:
     volumes:
       - db:/var/lib/postgresql/data
   sut:
-    image: mirror.gcr.io/library/alpine:latest
+    image: alpine:latest
     command: /tmp/run_tests.sh
     volumes:
       - ../run_tests.sh:/tmp/run_tests.sh:ro
