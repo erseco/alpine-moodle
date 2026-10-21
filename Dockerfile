@@ -1,4 +1,3 @@
-ARG ARCH=
 # Requires erseco/alpine-php-webserver 3.23.x with
 # https://github.com/erseco/alpine-php-webserver/pull/89 (PHP iconv linked to
 # modern GNU libiconv). That enables //TRANSLIT//IGNORE on Alpine/musl and
@@ -6,14 +5,14 @@ ARG ARCH=
 # https://github.com/erseco/alpine-moodle/issues/26.
 # Release CI explicitly selects 3.24-php83 (PHP 8.3 on Alpine 3.24) for Moodle 4.5–5.2.
 ARG PHP_WEBSERVER_VERSION=3.23
-FROM ${ARCH}erseco/alpine-php-webserver:${PHP_WEBSERVER_VERSION}
+FROM ghcr.io/erseco/alpine-php-webserver:${PHP_WEBSERVER_VERSION}
 
 LABEL maintainer="Ernesto Serrano <info@ernesto.es>"
 
 USER root
 # Composer comes from the official image: on the 3.24-php83 base, Alpine's
 # composer package depends on php85 and would repoint /usr/bin/php.
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY --from=mirror.gcr.io/library/composer:2 /usr/bin/composer /usr/bin/composer
 ARG PHP_VERSION=84
 RUN case "$PHP_VERSION" in 83|84) ;; *) echo 'Unsupported PHP runtime' >&2; exit 1 ;; esac \
     && apk add --no-cache patch rsync php${PHP_VERSION}-posix php${PHP_VERSION}-xmlwriter php${PHP_VERSION}-pecl-redis \
