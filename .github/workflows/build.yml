@@ -67,6 +67,7 @@ jobs:
         id: qemu
         uses: docker/setup-qemu-action@v4
         with:
+          image: mirror.gcr.io/tonistiigi/binfmt:latest
           platforms: all
 
       # Step 4: Set up Docker Buildx
@@ -75,6 +76,7 @@ jobs:
         with:
           driver-opts: |
             network=host
+            image=mirror.gcr.io/moby/buildkit:buildx-stable-1
 
       # Step 5: Login to DockerHub and GHCR
       - name: Login to DockerHub
@@ -256,6 +258,8 @@ jobs:
           # A late build must use today's policy, not the policy at its old tag.
           ref: main
       - uses: docker/setup-buildx-action@v4
+        with:
+          driver-opts: image=mirror.gcr.io/moby/buildkit:buildx-stable-1
       - uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
