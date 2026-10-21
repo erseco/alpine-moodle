@@ -18,7 +18,7 @@ services:
       - "./run_tests.sh:/tmp/run_tests.sh:ro"
 
   sut:
-    image: mirror.gcr.io/library/alpine:latest
+    image: alpine:latest
     depends_on:
       - app
     environment:

@@ -12,7 +12,7 @@ LABEL maintainer="Ernesto Serrano <info@ernesto.es>"
 USER root
 # Composer comes from the official image: on the 3.24-php83 base, Alpine's
 # composer package depends on php85 and would repoint /usr/bin/php.
-COPY --from=mirror.gcr.io/library/composer:2 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 ARG PHP_VERSION=84
 RUN case "$PHP_VERSION" in 83|84) ;; *) echo 'Unsupported PHP runtime' >&2; exit 1 ;; esac \
     && apk add --no-cache patch rsync php${PHP_VERSION}-posix php${PHP_VERSION}-xmlwriter php${PHP_VERSION}-pecl-redis \

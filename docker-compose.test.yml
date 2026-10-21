@@ -23,18 +23,18 @@ services:
       - postgres
 
   redis:
-    image: mirror.gcr.io/library/redis:alpine
+    image: redis:alpine
     restart: unless-stopped
 
   postgres:
-    image: mirror.gcr.io/library/postgres:17-alpine
+    image: postgres:17-alpine
     environment:
       - POSTGRES_PASSWORD=moodle
       - POSTGRES_USER=moodle
       - POSTGRES_DB=moodle
 
   sut:
-    image: mirror.gcr.io/library/alpine:latest
+    image: alpine:latest
     depends_on:
       - app
     environment:
