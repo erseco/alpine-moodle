@@ -8,7 +8,7 @@ services:
         # defaults to main. SQLite patches only exist for Moodle 5.0+.
         MOODLE_VERSION: ${MOODLE_VERSION:-main}
         PHP_VERSION: ${PHP_VERSION:-83}
-        PHP_WEBSERVER_VERSION: ${PHP_WEBSERVER_VERSION:-3.20}
+        PHP_WEBSERVER_VERSION: ${PHP_WEBSERVER_VERSION:-3.24-php83}
     environment:
       - SITE_URL=http://app:8080
       - MOODLE_DATABASE_TYPE=sqlite3

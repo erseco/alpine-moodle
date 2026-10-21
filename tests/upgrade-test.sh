@@ -11,7 +11,7 @@ cleanup() {
   dc down --volumes --remove-orphans
 }
 trap cleanup EXIT
-docker build --build-arg MOODLE_VERSION=v4.5.14 --build-arg PHP_VERSION=83 --build-arg PHP_WEBSERVER_VERSION=3.20 -t "$UPGRADE_IMAGE" .
+docker build --build-arg MOODLE_VERSION=v4.5.14 --build-arg PHP_VERSION=83 --build-arg PHP_WEBSERVER_VERSION=3.24-php83 -t "$UPGRADE_IMAGE" .
 docker build --build-arg MOODLE_VERSION=v5.3.0 --build-arg PHP_VERSION=84 --build-arg PHP_WEBSERVER_VERSION=3.23 -t alpine-moodle-upgrade:53 .
 dc up -d app
 dc run --rm sut

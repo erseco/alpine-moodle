@@ -4,10 +4,10 @@ cd "$(dirname "$0")/../.."
 check() {
   [[ "$(bash scripts/image-runtime.sh "$1" "$2")" == "php=$3"$'\n'"base=$4" ]]
 }
-check v4.5.14 auto 83 3.20
-check v5.0.10 auto 83 3.20
-check v5.1.7 auto 83 3.20
-check v5.2.3 auto 83 3.20
+check v4.5.14 auto 83 3.24-php83
+check v5.0.10 auto 83 3.24-php83
+check v5.1.7 auto 83 3.24-php83
+check v5.2.3 auto 83 3.24-php83
 check v5.3.0-beta auto 84 3.23
 check v5.3.0-beta1 auto 84 3.23
 check v5.3.0-beta2 auto 84 3.23

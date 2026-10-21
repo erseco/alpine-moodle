@@ -58,4 +58,4 @@ same environment variables, same multi-arch targets, same database support
 
 Since Moodle 5.3 LTS (`v5.3.0`), PHP 8.4 is the default for new releases, `latest` and development.
 Existing 4.5 and 5.0–5.2 tag runtimes remain unchanged. For a local 4.5 build, pass
-both `--build-arg PHP_VERSION=83 --build-arg PHP_WEBSERVER_VERSION=3.20`.
+both `--build-arg PHP_VERSION=83 --build-arg PHP_WEBSERVER_VERSION=3.24-php83`.
