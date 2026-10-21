@@ -89,7 +89,7 @@ jobs:
     env:
       MOODLE_VERSION: v5.3.0
       PHP_VERSION: '84'
-      PHP_WEBSERVER_VERSION: '3.23'
+      PHP_WEBSERVER_VERSION: '3.24-php84'
     steps:
       - uses: actions/checkout@v7
       - name: Test exact 5.3.0 stable on PHP 8.4

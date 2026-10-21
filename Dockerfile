@@ -1,10 +1,11 @@
-# Requires erseco/alpine-php-webserver 3.23.x with
+# Requires erseco/alpine-php-webserver 3.23.x or later with
 # https://github.com/erseco/alpine-php-webserver/pull/89 (PHP iconv linked to
 # modern GNU libiconv). That enables //TRANSLIT//IGNORE on Alpine/musl and
 # replaces the previous LD_PRELOAD + gnu-libiconv 1.15-r3 workaround for
 # https://github.com/erseco/alpine-moodle/issues/26.
-# Release CI explicitly selects 3.24-php83 (PHP 8.3 on Alpine 3.24) for Moodle 4.5–5.2.
-ARG PHP_WEBSERVER_VERSION=3.23
+# Release CI selects 3.24-php83 (PHP 8.3) for Moodle 4.5–5.2 and 3.24-php84
+# (PHP 8.4) for 5.3 and later, both on Alpine 3.24.
+ARG PHP_WEBSERVER_VERSION=3.24-php84
 FROM ghcr.io/erseco/alpine-php-webserver:${PHP_WEBSERVER_VERSION}
 
 LABEL maintainer="Ernesto Serrano <info@ernesto.es>"
