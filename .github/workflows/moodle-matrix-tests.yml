@@ -1,20 +1,14 @@
 name: moodle-matrix
 
-# Build and test the image across the supported Moodle version matrix so a
-# change cannot silently break a supported release or a specific layout.
-#
-# Layout coverage:
-#   - legacy (pre-5.1):  v4.5.x, v5.0.x
-#   - public/ (5.1+):    v5.1.x, v5.2.x, main (upcoming 5.3 line)
-#
-# Each job verifies that Moodle is reachable over HTTP AND that a Moodle-context
+# The 4.1 branch only builds Moodle 4.1 (#189); main's matrix covers 4.5 and
+# newer. Each job verifies that Moodle is reachable over HTTP AND that a Moodle-context
 # moosh command works (guards against the PR #149 regression). Version tags are
 # pinned to the latest available patch releases (there is no bare vX.Y tag); see
 # specs/ci-moodle-version-matrix.md.
 on:
   push:
     branches:
-      - main
+      - '4.1'
   pull_request:
   workflow_dispatch:
 
@@ -24,75 +18,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # PostgreSQL (the default backend) covers every Moodle version.
-  postgres:
-    name: "Moodle ${{ matrix.moodle }} · PostgreSQL"
+  # Moodle 4.1 runs on PHP 8.1 compiled from the patched php-src branch (#189).
+  # No SQLite: Moodle 4.1 has no SQLite patch. The PHP compile takes ~15 min.
+  moodle41:
+    name: "Moodle 4.1.22 · PHP 8.1 · ${{ matrix.backend }}"
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        moodle: [v4.5.14, v5.0.10, v5.1.7, v5.2.3, main]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Test PostgreSQL · Moodle ${{ matrix.moodle }}
-        env:
-          MOODLE_VERSION: ${{ matrix.moodle }}
-        run: ./tests/compose-test.sh docker-compose.test.yml
-
-  # MariaDB on a representative subset: one legacy + one public/ layout.
-  mariadb:
-    name: "Moodle ${{ matrix.moodle }} · MariaDB"
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        moodle: [v4.5.14, v5.2.3]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Test MariaDB · Moodle ${{ matrix.moodle }}
-        env:
-          MOODLE_VERSION: ${{ matrix.moodle }}
-        run: ./tests/compose-test.sh docker-compose.test.mariadb.yml
-
-  # SQLite now works on every supported version, so it is covered across the
-  # whole matrix (legacy 4.5/5.0 + public 5.1/5.2/main). This exercises each
-  # ateeducacion/moodle SQLite patch: PR #1 (5.2/main), PR #2 (5.1), PR #3 (5.0)
-  # and PR #4 (4.5). See specs/ci-moodle-sqlite-4.5-5.x.md.
-  sqlite:
-    name: "Moodle ${{ matrix.moodle }} · SQLite"
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        moodle: [v4.5.14, v5.0.10, v5.1.7, v5.2.3, main]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Test SQLite · Moodle ${{ matrix.moodle }}
-        env:
-          MOODLE_VERSION: ${{ matrix.moodle }}
-        run: ./tests/compose-test.sh docker-compose.test.sqlite.yml
-
-  moodle53:
-    name: "Moodle 5.3.0 · PHP 8.4 · ${{ matrix.backend }}"
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        backend: [postgres, mariadb, sqlite]
+        backend: [postgres, mariadb]
     env:
-      MOODLE_VERSION: v5.3.0
-      PHP_VERSION: '84'
-      PHP_WEBSERVER_VERSION: '3.24-php84'
+      MOODLE_VERSION: v4.1.22
     steps:
       - uses: actions/checkout@v7
-      - name: Test exact 5.3.0 stable on PHP 8.4
+      - name: Test Moodle 4.1.22 on compiled PHP 8.1
         env:
           BACKEND: ${{ matrix.backend }}
         run: |
@@ -101,11 +41,3 @@ jobs:
             *) FILE="docker-compose.test.${BACKEND}.yml" ;;
           esac
           ./tests/compose-test.sh "$FILE"
-
-  upgrade53:
-    name: "Persistent 4.5/PHP 8.3 → 5.3/PHP 8.4 upgrade"
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v7
-      - run: ./tests/upgrade-test.sh

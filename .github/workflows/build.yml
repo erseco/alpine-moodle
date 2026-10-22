@@ -150,6 +150,7 @@ jobs:
             --build-arg MOODLE_COMMIT=${{ steps.moodle_version.outputs.commit }} \
             --build-arg PHP_VERSION=${{ steps.runtime.outputs.php }} \
             --build-arg PHP_WEBSERVER_VERSION=${{ steps.runtime.outputs.base }} \
+            --build-arg PHP_BASE=${{ steps.runtime.outputs.stage }} \
             .
 
       # Steps 9x: Functional tests (HTTP web check + Moodle-context moosh smoke
@@ -176,8 +177,9 @@ jobs:
           PHP_WEBSERVER_VERSION: ${{ steps.runtime.outputs.base }}
         run: ./tests/compose-test.sh docker-compose.test.mariadb.yml
 
+      # Moodle 4.1 has no SQLite patch, so SQLite stays disabled there.
       - name: Test (SQLite)
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && steps.runtime.outputs.php != '81'
         env:
           MOODLE_VERSION: ${{ steps.moodle_version.outputs.version }}
           PHP_VERSION: ${{ steps.runtime.outputs.php }}
@@ -196,6 +198,7 @@ jobs:
             --build-arg MOODLE_COMMIT=${{ steps.moodle_version.outputs.commit }} \
             --build-arg PHP_VERSION=${{ steps.runtime.outputs.php }} \
             --build-arg PHP_WEBSERVER_VERSION=${{ steps.runtime.outputs.base }} \
+            --build-arg PHP_BASE=${{ steps.runtime.outputs.stage }} \
             -t alpine-moodle:verify .
           ./tests/verify-moodle-version.sh alpine-moodle:verify "${{ steps.moodle_version.outputs.version }}"
 
@@ -208,12 +211,14 @@ jobs:
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          platforms: linux/amd64,linux/arm64,linux/ppc64le,linux/s390x
+          # Moodle 4.1 (compiled PHP 8.1) is only published for amd64/arm64.
+          platforms: ${{ steps.runtime.outputs.platforms }}
           build-args: |
             MOODLE_VERSION=${{ steps.moodle_version.outputs.version }}
             MOODLE_COMMIT=${{ steps.moodle_version.outputs.commit }}
             PHP_VERSION=${{ steps.runtime.outputs.php }}
             PHP_WEBSERVER_VERSION=${{ steps.runtime.outputs.base }}
+            PHP_BASE=${{ steps.runtime.outputs.stage }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
