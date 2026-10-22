@@ -34,7 +34,9 @@ The `image-aliases` workflow runs after every successful image build (`buildx` a
 `build-php84`). It reads the release tags of the repository, computes the aliases with
 `scripts/image-aliases.sh plan` and copies the exact multi-arch image of each release to
 its aliases on Docker Hub and GHCR (`scripts/sync-image-aliases.sh`), so nothing is
-rebuilt. Aliases already on the right image are left alone and releases whose build has
+rebuilt. It reads each release index once from GHCR (same digest, same bytes as on
+Docker Hub) and writes it under each alias through the registry API, so it never
+counts against the Docker Hub pull rate limit. Aliases already on the right image are left alone and releases whose build has
 not finished yet are skipped, so a late build of an older patch never moves a series tag
 back. The same workflow updates the Docker Hub description with the current tag list.
 
