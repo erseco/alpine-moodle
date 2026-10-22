@@ -303,6 +303,23 @@ assert_eq "sub-plugin restored in place" "sub-purposes/agent" "$(cat "$AIM/purpo
 assert_file "second sub-plugin type restored" "$AIM/tools/gemini/version.php"
 assert_no_file "plugin not nested inside itself" "$AIM/ai_manager"
 
+echo "== test 16: a preserved plugin path with spaces still covers its sub-plugins =="
+# The covered check word-split the stored paths, so "public/local/sp ace"
+# never matched and its sub-plugin was preserved and restored a second time.
+rm -rf "$HTML"
+mkdir -p "$HTML/public/lib"
+printf '%s\n' "<?php" "\$version  = 2026041503.00;" > "$HTML/public/version.php"
+printf 'old-public-core\n' > "$HTML/public/lib/moodlelib.php"
+SPACE="$HTML/public/local/sp ace"
+mkdir -p "$SPACE/sub/a"
+printf 'space-plugin\n' > "$SPACE/version.php"
+printf 'space-sub\n' > "$SPACE/sub/a/version.php"
+OUT="$(SYNC_MOODLE_CODE=auto EXTRA_PLUGIN_PATHS= SYNC_PRESERVE_PLUGINS=true run_sync)"
+assert_eq "parent with spaces restored" "space-plugin" "$(cat "$SPACE/version.php" 2>/dev/null || true)"
+assert_eq "sub-plugin under parent with spaces restored" "space-sub" "$(cat "$SPACE/sub/a/version.php" 2>/dev/null || true)"
+assert_eq "sub-plugin covered by its parent, not preserved twice" "0" \
+  "$(printf '%s\n' "$OUT" | grep -c 'preserved third-party plugin public/local/sp ace/sub/a' || true)"
+
 echo
 if [ "$FAILED" -eq 0 ]; then
   echo "All unit tests passed."

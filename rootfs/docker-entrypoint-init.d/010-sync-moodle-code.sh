@@ -276,8 +276,16 @@ if [ "$PRESERVE_PLUGINS" = "true" ] && [ "$html_has_code" = "yes" ]; then
     if [ -d "${MOODLE_SRC_DIR}/$(translate_layout_path "$reldir")" ]; then
       continue
     fi
+    # Read the stored paths line by line: word-splitting them broke the
+    # check for plugin directories whose names contain spaces.
     covered=no
-    for p in $(cat "${tmpdir}/auto-paths") ${EXTRA_PLUGIN_PATHS:-}; do
+    while IFS= read -r p; do
+      case "$reldir" in
+        "$p"|"$p"/*) covered=yes; break ;;
+      esac
+    done < "${tmpdir}/auto-paths"
+    # shellcheck disable=SC2086
+    for p in ${EXTRA_PLUGIN_PATHS:-}; do
       case "$reldir" in
         "$p"|"$p"/*) covered=yes; break ;;
       esac
