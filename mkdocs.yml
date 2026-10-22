@@ -45,6 +45,7 @@ theme:
 nav:
   - Home: index.md
   - Quick Start: quick-start.md
+  - Image tags: image-tags.md
   - Docker Compose: docker-compose.md
   - Reverse Proxy: reverse-proxy.md
   - Environment Variables: environment-variables.md

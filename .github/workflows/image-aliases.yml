@@ -1,0 +1,77 @@
+name: image-aliases
+
+# Publishes the plain-number tags of every release (X.Y.Z, plus X.Y, X and
+# X.Y-php84 for the newest release of each series) as copies of the exact
+# multi-arch image of its vX.Y.Z tag, then the Docker Hub description with the
+# current tag list. It runs after every successful image build, so a new patch
+# release moves its series tags as soon as it is published, and on demand to
+# backfill. Nothing is rebuilt and latest is left to promote-latest.
+on:
+  workflow_run:
+    workflows: [buildx, build-php84]
+    types: [completed]
+  workflow_dispatch:
+
+# Every run recomputes all aliases, so a queued run only needs the newest state.
+concurrency:
+  group: image-aliases
+  cancel-in-progress: false
+
+jobs:
+  aliases:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event != 'pull_request')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      # Every release tag, to compute the aliases
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Unit tests
+        run: |
+          bash tests/unit/test-image-aliases.sh
+          bash tests/unit/test-sync-image-aliases.sh
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Point the aliases at their releases
+        run: |
+          git tag | bash scripts/image-aliases.sh plan > aliases.txt
+          cat aliases.txt
+          bash scripts/sync-image-aliases.sh "$GITHUB_REPOSITORY" < aliases.txt
+
+      # A single alias that failed must not keep the tag list out of date.
+      - name: Generate Docker Hub README with the tag list
+        if: ${{ !cancelled() }}
+        run: |
+          LATEST=$(bash scripts/release-policy.sh --newest)
+          { sed '/<!-- tags:start -->/q' README.md
+            git tag | bash scripts/image-aliases.sh readme "$LATEST"
+            sed -n '/<!-- tags:end -->/,$p' README.md
+          } > dockerhub-README.md
+          sed -n '/<!-- tags:start -->/,/<!-- tags:end -->/p' dockerhub-README.md
+
+      - name: Docker Hub Description
+        if: ${{ !cancelled() }}
+        uses: peter-evans/dockerhub-description@v5
+        with:
+          readme-filepath: ./dockerhub-README.md
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+          short-description: ${{ github.event.repository.description }}
