@@ -324,6 +324,7 @@ Moodle **4.5 LTS** and unsuffixed **5.0–5.2** tags keep **PHP 8.3**:
 | `5.0`, `5.1`, `5.2`, `v5.0.x`, `v5.1.x`, `v5.2.x` | 8.3 |
 | `5.0-php84`, `5.1-php84`, `5.2-php84`, `v5.0.x-php84`, `v5.1.x-php84`, `v5.2.x-php84` (opt-in) | 8.4 |
 | `4`, `4.5`, `v4.5.x` | 8.3 |
+| `v4.1.22` (amd64/arm64 only, see below) | 8.1 + CVE backport |
 
 For Moodle 5.0–5.2, PHP 8.4 remains available as **opt-in** tags with a `-php84` suffix:
 
@@ -340,6 +341,19 @@ These legacy `-php84` tags are built from the [`php84` branch](https://github.co
 
 See [the 5.3 migration plan and reproducible tests](docs/moodle-53-migration.md).
 Moodle 4.5 tags remain on PHP 8.3 throughout their security-support period.
+
+### Moodle 4.1 on PHP 8.1 (security stopgap)
+
+Moodle 4.1 refuses PHP 8.2 and newer, and PHP 8.1 is end of life. The `v4.1.22` image is built
+from the [`4.1` branch](https://github.com/erseco/alpine-moodle/tree/4.1) and compiles PHP 8.1 from the php-src
+[`PHP-8.1-CVE-2026-109618-109619`](https://github.com/php/php-src/tree/PHP-8.1-CVE-2026-109618-109619)
+branch, which backports only the fixes for CVE-2026-109618 and CVE-2026-109619
+([#189](https://github.com/erseco/alpine-moodle/issues/189)). `php -v` reports
+`8.1.34-cve-2026-109618-109619` so you can check that the image includes the fix. It is published
+for `linux/amd64` and `linux/arm64` only, and SQLite is not available.
+
+Moodle 4.1 no longer receives Moodle security fixes, and this PHP build gets no further fixes
+either. Use it only while you upgrade to Moodle 4.5 LTS or 5.3 LTS.
 
 ## Registries
 

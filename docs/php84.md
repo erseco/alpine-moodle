@@ -14,6 +14,7 @@ Moodle 5.3 beta/RC tags use PHP 8.4 directly, without a suffix. See the
 
 | Moodle version | Default tag | Opt-in tag (PHP 8.4) |
 |----------------|-----------------------|----------------------|
+| Moodle 4.1.22  | `v4.1.22` (PHP 8.1 + CVE backport, amd64/arm64) | *(not available)* |
 | Moodle 4.5.x   | `v4.5.x` (PHP 8.3)    | *(not available)*    |
 | Moodle 5.0.x   | `v5.0.x` (PHP 8.3)    | `v5.0.x-php84`       |
 | Moodle 5.1.x   | `v5.1.x` (PHP 8.3)    | `v5.1.x-php84`       |

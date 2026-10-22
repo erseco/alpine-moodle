@@ -24,7 +24,8 @@ export MOODLE_VERSION="${MOODLE_VERSION:-main}"
 runtime=$(bash scripts/image-runtime.sh "$MOODLE_VERSION" "${PHP_VERSION:-auto}")
 PHP_VERSION=$(printf '%s\n' "$runtime" | sed -n 's/^php=//p')
 PHP_WEBSERVER_VERSION=${PHP_WEBSERVER_VERSION:-$(printf '%s\n' "$runtime" | sed -n 's/^base=//p')}
-export PHP_VERSION PHP_WEBSERVER_VERSION
+PHP_BASE=$(printf '%s\n' "$runtime" | sed -n 's/^stage=//p')
+export PHP_VERSION PHP_WEBSERVER_VERSION PHP_BASE
 
 dc() { docker compose --file "$FILE" "$@"; }
 
