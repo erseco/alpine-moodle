@@ -20,6 +20,32 @@ A lightweight **Moodle** Docker image built on [Alpine Linux](https://alpinelinu
 
 The documentation site covers quick start, `docker-compose` recipes, reverse proxy setups (Traefik, Nginx, NPM, Apache, Caddy), every supported environment variable, persistence and upgrade workflows, and a troubleshooting section built from the most frequent support questions.
 
+## Image tags
+
+Every Moodle release is published as `vX.Y.Z`, the main tag, and also without the `v`. On top of
+that, series tags always point at the newest release of their series, so `4.5` gets every 4.5 LTS
+security release without editing your compose file:
+
+| Tag | Image | Example |
+|-----|-------|---------|
+| `vX.Y.Z` | that exact release | `v5.2.4` |
+| `X.Y.Z` | the same image as `vX.Y.Z` | `5.2.4` |
+| `X.Y` | newest release of Moodle X.Y, moves with every patch release | `4.5` |
+| `X` | newest release of Moodle X, moves to new series too (5.3 → 5.4) | `5` |
+| `X.Y-php84`, `X.Y.Z-php84` | opt-in PHP 8.4 line for Moodle 5.0–5.2 | `5.2-php84` |
+| `latest` | newest Moodle 5.3 LTS release | |
+| `main`, `beta` | Moodle development branch | |
+
+Beta and RC releases are also published without the `v` (`5.3.0-rc2`), but never move a series tag.
+In production prefer an `X.Y` tag: an `X` tag can switch to a newer Moodle series, which upgrades
+the database and cannot be rolled back.
+
+<!-- tags:start -->
+The current list of series and their tags is on [Docker Hub](https://hub.docker.com/r/erseco/alpine-moodle);
+all tags are on [Docker Hub](https://hub.docker.com/r/erseco/alpine-moodle/tags) and
+[GHCR](https://github.com/erseco/alpine-moodle/pkgs/container/alpine-moodle).
+<!-- tags:end -->
+
 ## Quick start
 
 ### Single container (SQLite — dev/demo only)
@@ -294,10 +320,10 @@ Moodle **4.5 LTS** and unsuffixed **5.0–5.2** tags keep **PHP 8.3**:
 
 | Image tag | PHP |
 |-----------|-----|
-| `latest`, `main`, `v5.3.x` and newer (incl. beta/RC) | 8.4 |
-| `v5.0.x`, `v5.1.x`, `v5.2.x` | 8.3 |
-| `v5.0.x-php84`, `v5.1.x-php84`, `v5.2.x-php84` (opt-in) | 8.4 |
-| `v4.5.x` | 8.3 |
+| `latest`, `main`, `5`, `5.3`, `v5.3.x` and newer (incl. beta/RC) | 8.4 |
+| `5.0`, `5.1`, `5.2`, `v5.0.x`, `v5.1.x`, `v5.2.x` | 8.3 |
+| `5.0-php84`, `5.1-php84`, `5.2-php84`, `v5.0.x-php84`, `v5.1.x-php84`, `v5.2.x-php84` (opt-in) | 8.4 |
+| `4`, `4.5`, `v4.5.x` | 8.3 |
 
 For Moodle 5.0–5.2, PHP 8.4 remains available as **opt-in** tags with a `-php84` suffix:
 
