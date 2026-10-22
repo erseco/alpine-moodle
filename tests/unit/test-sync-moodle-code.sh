@@ -276,6 +276,33 @@ SYNC_MOODLE_CODE=auto EXTRA_PLUGIN_PATHS= SYNC_PRESERVE_PLUGINS=true run_sync
 assert_no_file "removed qtype_random is not restored" "$HTML/public/question/type/random"
 assert_eq "custom question type survives" "custom-plugin" "$(cat "$HTML/public/question/type/customquestion/version.php")"
 
+echo "== test 15: third-party plugins with sub-plugins are not nested (#191) =="
+# local_ai_manager ships sub-plugins under purposes/ and tools/. Their
+# version.php paths sort before the parent's, so they used to be preserved
+# first and the parent was then copied INTO the existing directory
+# (public/local/ai_manager/ai_manager).
+rm -rf "$SRC" "$HTML"
+mkdir -p "$SRC/public/lib"
+printf '%s\n' "<?php" "\$version  = 2026041504.00;" > "$SRC/public/version.php"
+printf 'image-public-core\n' > "$SRC/public/lib/moodlelib.php"
+mkdir -p "$HTML/public/lib"
+printf '%s\n' "<?php" "\$version  = 2026041503.00;" > "$HTML/public/version.php"
+printf 'old-public-core\n' > "$HTML/public/lib/moodlelib.php"
+printf '<?php // site config\n' > "$HTML/config.php"
+AIM="$HTML/public/local/ai_manager"
+for sub in purposes/agent purposes/chat tools/chatgpt tools/gemini; do
+  mkdir -p "$AIM/$sub"
+  printf 'sub-%s\n' "$sub" > "$AIM/$sub/version.php"
+done
+printf 'ai-manager-plugin\n' > "$AIM/version.php"
+printf 'ai-manager-lib\n' > "$AIM/lib.php"
+SYNC_MOODLE_CODE=auto EXTRA_PLUGIN_PATHS= SYNC_PRESERVE_PLUGINS=true run_sync
+assert_eq "parent plugin restored in place" "ai-manager-plugin" "$(cat "$AIM/version.php" 2>/dev/null || true)"
+assert_file "parent plugin content intact" "$AIM/lib.php"
+assert_eq "sub-plugin restored in place" "sub-purposes/agent" "$(cat "$AIM/purposes/agent/version.php" 2>/dev/null || true)"
+assert_file "second sub-plugin type restored" "$AIM/tools/gemini/version.php"
+assert_no_file "plugin not nested inside itself" "$AIM/ai_manager"
+
 echo
 if [ "$FAILED" -eq 0 ]; then
   echo "All unit tests passed."

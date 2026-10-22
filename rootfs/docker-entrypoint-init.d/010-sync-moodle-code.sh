@@ -254,11 +254,15 @@ if [ -f "${MOODLE_SRC_DIR}/lib/plugins.json" ] && [ -f "${MOODLE_SRC_DIR}/lib/co
   ' "$MOODLE_SRC_DIR" > "${tmpdir}/deleted-plugins"
 fi
 if [ "$PRESERVE_PLUGINS" = "true" ] && [ "$html_has_code" = "yes" ]; then
+  # Sort plugin directories, not version.php paths: a parent directory must
+  # come before its sub-plugins (local/foo before local/foo/purposes/bar) so
+  # the "covered" check below skips the children and the parent is copied
+  # whole. Sorting the full file paths put sub-plugins first and nested the
+  # parent inside itself (local/foo/foo, #191).
   find "$MOODLE_HTML_DIR" -mindepth 2 -maxdepth 8 -type f -name version.php 2>/dev/null \
-    | sort > "${tmpdir}/version-files"
-  while IFS= read -r vfile; do
-    reldir="${vfile#"${MOODLE_HTML_DIR}"/}"
-    reldir="$(dirname "$reldir")"
+    | sed 's|/version\.php$||' | LC_ALL=C sort > "${tmpdir}/plugin-dirs"
+  while IFS= read -r pdir; do
+    reldir="${pdir#"${MOODLE_HTML_DIR}"/}"
     case "$reldir" in .|public) continue ;; esac
     if is_ignored_plugin_dir "$reldir"; then
       continue
@@ -282,10 +286,12 @@ if [ "$PRESERVE_PLUGINS" = "true" ] && [ "$html_has_code" = "yes" ]; then
       continue
     fi
     mkdir -p "${tmpdir}/auto/$(dirname "$reldir")"
+    # Never copy into an existing directory: cp -a would nest the plugin.
+    rm -rf "${tmpdir:?}/auto/${reldir:?}"
     cp -a "${MOODLE_HTML_DIR}/${reldir}" "${tmpdir}/auto/${reldir}"
     printf '%s\n' "$reldir" >> "${tmpdir}/auto-paths"
     echo "  preserved third-party plugin ${reldir}"
-  done < "${tmpdir}/version-files"
+  done < "${tmpdir}/plugin-dirs"
 fi
 
 # 3) Sync core from the immutable image tree.
