@@ -34,6 +34,7 @@ Every setting exposed by `erseco/alpine-moodle`. Defaults come from the `Dockerf
 | `DB_NAME`               | `moodle`  | Database name. |
 | `DB_USER`               | `moodle`  | Database user. |
 | `DB_PASS`               | `moodle`  | Database password. |
+| `DB_SSL`                | *(empty)* | Database TLS mode: `require` or `verify-full`; PostgreSQL also supports `prefer` and `disable`. Applied on every start before Moodle's database check. Empty leaves existing settings unchanged; ignored for SQLite. |
 | `DB_PREFIX`             | `mdl_`    | Table prefix. Must be non-numeric. |
 | `DB_SQLITE_PATH`        | `/var/www/moodledata/sqlite/moodle.sqlite` | SQLite file path. Must resolve inside `/var/www/moodledata/`. |
 | `DB_FETCHBUFFERSIZE`    | *(empty)* | Set to `0` when using PgBouncer in *transaction* mode. |

@@ -52,6 +52,7 @@ ENV LANG=en_US.UTF-8 \
     DB_NAME=moodle \
     DB_USER=moodle \
     DB_PASS=moodle \
+    DB_SSL= \
     DB_PREFIX=mdl_ \
     DB_SQLITE_PATH=/var/www/moodledata/sqlite/moodle.sqlite \
     DB_DBHANDLEOPTIONS=false \
