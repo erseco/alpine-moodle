@@ -239,16 +239,16 @@ set_extra_db_settings() {
         update_or_add_config_value "\$CFG->dboptions\['ssl'\]" "$DB_SSL"
     fi
     if [ -n "$DB_FETCHBUFFERSIZE" ]; then
-        update_or_add_config_value "\$CFG->dboptions['fetchbuffersize']" "$DB_FETCHBUFFERSIZE"
+        update_or_add_config_value "\$CFG->dboptions\['fetchbuffersize'\]" "$DB_FETCHBUFFERSIZE"
     fi
     if [ "$DB_DBHANDLEOPTIONS" = 'true' ]; then
-        update_or_add_config_value "\$CFG->dboptions['dbhandlesoptions']" 'true'
+        update_or_add_config_value "\$CFG->dboptions\['dbhandlesoptions'\]" 'true'
     fi
     if [ -n "$DB_HOST_REPLICA" ]; then
         if [ -n "$DB_USER_REPLICA" ] && [ -n "$DB_PASS_REPLICA" ] && [ -n "$DB_PORT_REPLICA" ]; then
-            update_or_add_config_value "\$CFG->dboptions['readonly']" "[ 'instance' => [ 'dbhost' => '$DB_HOST_REPLICA', 'dbport' => '$DB_PORT_REPLICA', 'dbuser' => '$DB_USER_REPLICA', 'dbpass' => '$DB_PASS_REPLICA' ] ]"
+            update_or_add_config_value "\$CFG->dboptions\['readonly'\]" "[ 'instance' => [ 'dbhost' => '$DB_HOST_REPLICA', 'dbport' => '$DB_PORT_REPLICA', 'dbuser' => '$DB_USER_REPLICA', 'dbpass' => '$DB_PASS_REPLICA' ] ]"
         else
-            update_or_add_config_value "\$CFG->dboptions['readonly']" "[ 'instance' => [ '$DB_HOST_REPLICA' ] ]"
+            update_or_add_config_value "\$CFG->dboptions\['readonly'\]" "[ 'instance' => [ '$DB_HOST_REPLICA' ] ]"
         fi
     fi
 }
