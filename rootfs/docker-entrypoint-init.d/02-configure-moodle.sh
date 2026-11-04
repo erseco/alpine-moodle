@@ -228,6 +228,16 @@ install_database() {
 
 # Function to set extra database settings
 set_extra_db_settings() {
+    if [ "$DB_TYPE" != "sqlite3" ] && [ -n "${DB_SSL:-}" ]; then
+        case "$DB_SSL" in
+            require|verify-full|prefer|disable) ;;
+            *)
+                echo "ERROR: DB_SSL must be require, verify-full, prefer, disable, or empty." >&2
+                exit 1
+                ;;
+        esac
+        update_or_add_config_value "\$CFG->dboptions\['ssl'\]" "$DB_SSL"
+    fi
     if [ -n "$DB_FETCHBUFFERSIZE" ]; then
         update_or_add_config_value "\$CFG->dboptions['fetchbuffersize']" "$DB_FETCHBUFFERSIZE"
     fi
@@ -442,8 +452,10 @@ fi
 # Generate config.php file if it doesn't exist
 if [ ! -f "$config_file" ]; then
     generate_config_file
-    set_extra_db_settings
 fi
+
+# Apply extra database settings to new and persisted configs before Moodle bootstrap.
+set_extra_db_settings
 
 # Detect Moodle >=5.1 (with public/ directory) — do it here, just after config.php exists
 if [ -d /var/www/html/public ]; then

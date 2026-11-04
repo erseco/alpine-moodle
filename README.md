@@ -166,6 +166,7 @@ Define the ENV variables in `docker-compose.yml`. The full reference with notes,
 | `DB_NAME`                   | `moodle`             | Database name. |
 | `DB_USER`                   | `moodle`             | Database user. |
 | `DB_PASS`                   | `moodle`             | Database password. |
+| `DB_SSL`                    |                      | Database TLS mode: `require`, `verify-full` (also `prefer`, `disable` for PostgreSQL). Applied on every start; empty preserves existing settings. Ignored for SQLite. |
 | `DB_SQLITE_PATH`            | `/var/www/moodledata/sqlite/moodle.sqlite` | SQLite file path when using `sqlite3`. |
 | `DB_FETCHBUFFERSIZE`        |                      | Set to `0` with PgBouncer in *transaction* mode. |
 | `DB_DBHANDLEOPTIONS`        | `false`              | Set to `true` with PgBouncer pool modes that reject `SET` options. |
