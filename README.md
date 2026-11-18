@@ -145,6 +145,18 @@ Example — install an extra Alpine package for debugging:
 docker compose exec --user root moodle sh -c "apk update && apk add nano curl"
 ```
 
+## PDF annotation in assignments
+
+Ghostscript (`/usr/bin/gs`) is included for Moodle's built-in **Annotate PDF**
+assignment feedback plugin (`assignfeedback_editpdf`). Moodle defaults to this
+path. For an existing site, check **Site administration → Server → System paths →
+Path to Ghostscript** (`pathtogs`) and set it to `/usr/bin/gs` if it was previously
+cleared or points elsewhere. Enable the assignment feedback plugin if needed.
+Existing site settings are not forcibly overwritten on upgrade.
+
+No additional daemon or Poppler package is required. Use Moodle's built-in
+Ghostscript test and test an actual PDF submission after upgrading.
+
 ## Configuration
 
 Define the ENV variables in `docker-compose.yml`. The full reference with notes, grouping and defaults lives at <https://erseco.github.io/alpine-moodle/environment-variables/>.
