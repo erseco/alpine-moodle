@@ -309,12 +309,21 @@ configure_moodle_settings() {
     php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=pathtophp --set=/usr/bin/php
     php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=pathtodu --set=/usr/bin/du
     php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=enableblogs --set=0
-    php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtphosts --set="$SMTP_HOST:$SMTP_PORT"
-    php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtpuser --set="$SMTP_USER"
-    php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtppass --set="$SMTP_PASSWORD"
-    php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtpsecure --set="$SMTP_PROTOCOL"
-    php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=noreplyaddress --set="$MOODLE_MAIL_NOREPLY_ADDRESS"
-    php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=emailsubjectprefix --set="$MOODLE_MAIL_PREFIX"
+    # Empty mail variables leave the values saved in the admin pages alone
+    # (#194). With SMTP_HOST set, empty user/password/protocol are valid
+    # (no auth, no TLS) and are written as given.
+    if [ -n "${SMTP_HOST:-}" ]; then
+        php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtphosts --set="$SMTP_HOST${SMTP_PORT:+:$SMTP_PORT}"
+        php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtpuser --set="${SMTP_USER:-}"
+        php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtppass --set="${SMTP_PASSWORD:-}"
+        php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtpsecure --set="${SMTP_PROTOCOL:-}"
+    fi
+    if [ -n "${MOODLE_MAIL_NOREPLY_ADDRESS:-}" ]; then
+        php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=noreplyaddress --set="$MOODLE_MAIL_NOREPLY_ADDRESS"
+    fi
+    if [ -n "${MOODLE_MAIL_PREFIX:-}" ]; then
+        php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=emailsubjectprefix --set="$MOODLE_MAIL_PREFIX"
+    fi
 
     # Added the binary path, but the executable can be not installed
     # php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=pathtopython --set="/usr/bin/python3"
