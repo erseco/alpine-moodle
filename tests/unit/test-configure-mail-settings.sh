@@ -28,38 +28,56 @@ PHP
 chmod +x "$TMP/bin/php"
 sed -n '/^configure_moodle_settings() {/,/^}/p' "$SCRIPT" > "$TMP/fn.sh"
 
-# run_case <name> <env assignments...>: prints the cfg.php calls it made.
+# run_case <name> <env assignments...>: records the cfg.php calls in $TMP/<name>.log
+# and the script's stderr in $TMP/<name>.err.
 run_case() {
-  log="$TMP/$1.log"; shift
-  : > "$log"
-  env -i PATH="$TMP/bin:/usr/bin:/bin" CFG_LOG="$log" "$@" \
-    sh -c ". '$TMP/fn.sh'; configure_moodle_settings" >/dev/null
-  cat "$log"
+  name="$1"; shift
+  : > "$TMP/$name.log"
+  env -i PATH="$TMP/bin:/usr/bin:/bin" CFG_LOG="$TMP/$name.log" "$@" \
+    sh -c ". '$TMP/fn.sh'; configure_moodle_settings" >/dev/null 2>"$TMP/$name.err"
 }
 
-check() {
-  label="$1"; log="$2"; pattern="$3"; want="$4"
-  if grep -q "^$pattern" "$log"; then got=present; else got=absent; fi
-  if [ "$got" = "$want" ]; then echo "  PASS: $label"
-  else echo "  FAIL: $label (expected $want: $pattern)"; FAILED=$((FAILED + 1)); fi
+# written <label> <case> <setting> [value]: the setting was written (with exactly
+# that value when one is given).
+written() {
+  if [ $# -eq 4 ]; then grep -qxF "$3=$4" "$TMP/$2.log"; else grep -q "^$3=" "$TMP/$2.log"; fi \
+    && echo "  PASS: $1" || { echo "  FAIL: $1"; FAILED=$((FAILED + 1)); }
 }
+
+not_written() {
+  if grep -q "^$3=" "$TMP/$2.log"; then echo "  FAIL: $1"; FAILED=$((FAILED + 1)); else echo "  PASS: $1"; fi
+}
+
+MAIL_SETTINGS="smtphosts smtpuser smtppass smtpsecure noreplyaddress emailsubjectprefix"
 
 echo "== empty mail variables leave admin settings alone =="
 run_case empty SMTP_HOST= SMTP_PORT= SMTP_USER= SMTP_PASSWORD= SMTP_PROTOCOL= \
-  MOODLE_MAIL_NOREPLY_ADDRESS= MOODLE_MAIL_PREFIX= >/dev/null
-for s in smtphosts smtpuser smtppass smtpsecure noreplyaddress emailsubjectprefix; do
-  check "$s not written" "$TMP/empty.log" "$s=" absent
-done
-check "unrelated settings still written" "$TMP/empty.log" "pathtophp=" present
+  MOODLE_MAIL_NOREPLY_ADDRESS= MOODLE_MAIL_PREFIX=
+for s in $MAIL_SETTINGS; do not_written "$s not written" empty "$s"; done
+written "unrelated settings still written" empty pathtophp
+
+echo "== empty SMTP_HOST skips the whole SMTP block and warns =="
+run_case nohost SMTP_HOST= SMTP_PORT=587 SMTP_USER=u SMTP_PASSWORD=p SMTP_PROTOCOL=tls \
+  MOODLE_MAIL_NOREPLY_ADDRESS= MOODLE_MAIL_PREFIX=
+for s in smtphosts smtpuser smtppass smtpsecure; do not_written "$s not written" nohost "$s"; done
+if grep -q "SMTP_HOST is empty" "$TMP/nohost.err"; then echo "  PASS: warning printed"
+else echo "  FAIL: warning printed"; FAILED=$((FAILED + 1)); fi
+if [ -s "$TMP/empty.err" ]; then echo "  FAIL: no warning when all empty"; FAILED=$((FAILED + 1))
+else echo "  PASS: no warning when all empty"; fi
 
 echo "== set mail variables are applied =="
 run_case set SMTP_HOST=mail.example.com SMTP_PORT=25 SMTP_USER= SMTP_PASSWORD= SMTP_PROTOCOL= \
-  MOODLE_MAIL_NOREPLY_ADDRESS=noreply@example.com MOODLE_MAIL_PREFIX='[x]' >/dev/null
-check "smtphosts" "$TMP/set.log" "smtphosts=mail.example.com:25$" present
-check "smtpuser written empty (no auth)" "$TMP/set.log" "smtpuser=$" present
-check "smtpsecure written empty (no TLS)" "$TMP/set.log" "smtpsecure=$" present
-check "noreplyaddress" "$TMP/set.log" "noreplyaddress=noreply@example.com$" present
-check "emailsubjectprefix" "$TMP/set.log" "emailsubjectprefix=\[x\]$" present
+  MOODLE_MAIL_NOREPLY_ADDRESS=noreply@example.com MOODLE_MAIL_PREFIX='[x]'
+written "smtphosts" set smtphosts mail.example.com:25
+written "smtpuser written empty (no auth)" set smtpuser ""
+written "smtppass written empty" set smtppass ""
+written "smtpsecure written empty (no TLS)" set smtpsecure ""
+written "noreplyaddress" set noreplyaddress noreply@example.com
+written "emailsubjectprefix" set emailsubjectprefix "[x]"
+
+echo "== empty SMTP_PORT writes the host alone =="
+run_case noport SMTP_HOST=mail.example.com SMTP_PORT=
+written "smtphosts without port" noport smtphosts mail.example.com
 
 [ "$FAILED" -eq 0 ] || { echo "$FAILED failure(s)"; exit 1; }
 echo "All mail settings tests passed."

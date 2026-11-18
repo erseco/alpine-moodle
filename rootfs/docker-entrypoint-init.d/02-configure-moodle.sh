@@ -317,6 +317,8 @@ configure_moodle_settings() {
         php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtpuser --set="${SMTP_USER:-}"
         php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtppass --set="${SMTP_PASSWORD:-}"
         php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=smtpsecure --set="${SMTP_PROTOCOL:-}"
+    elif [ -n "${SMTP_USER:-}${SMTP_PASSWORD:-}${SMTP_PROTOCOL:-}" ]; then
+        echo "WARNING: SMTP_USER/SMTP_PASSWORD/SMTP_PROTOCOL set but SMTP_HOST is empty; SMTP settings are left as saved in Moodle." >&2
     fi
     if [ -n "${MOODLE_MAIL_NOREPLY_ADDRESS:-}" ]; then
         php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=noreplyaddress --set="$MOODLE_MAIL_NOREPLY_ADDRESS"

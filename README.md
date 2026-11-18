@@ -180,7 +180,7 @@ Define the ENV variables in `docker-compose.yml`. The full reference with notes,
 | `MOODLE_SITENAME`           | `Dockerized_Moodle`  | Full site name shown on the front page. |
 | `MOODLE_USERNAME`           | `moodleuser`         | Admin username. **Override on first boot.** |
 | `MOODLE_PASSWORD`           | `PLEASE_CHANGEME`    | Admin password. **Override on first boot.** |
-| `SMTP_HOST`                 | `smtp.gmail.com`     | SMTP server. Set it empty to manage outgoing mail from Moodle's admin pages; otherwise the `SMTP_*` values are rewritten on every start. |
+| `SMTP_HOST`                 | `smtp.gmail.com`     | SMTP server. Mail settings are rewritten on every start; to manage them from Moodle's admin pages set `SMTP_HOST`, `MOODLE_MAIL_NOREPLY_ADDRESS` and `MOODLE_MAIL_PREFIX` to `""` (leaving them out applies the defaults). See [environment variables](https://erseco.github.io/alpine-moodle/environment-variables/). |
 | `SMTP_PORT`                 | `587`                | SMTP port. |
 | `SMTP_USER`                 | `your_email@gmail.com` | SMTP username. |
 | `SMTP_PASSWORD`             | `your_password`      | SMTP password. |
