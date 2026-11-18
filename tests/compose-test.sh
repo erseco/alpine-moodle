@@ -86,6 +86,23 @@ dc exec -T app php -r '
   echo "PHP " . PHP_VERSION . " / 64-bit / extensions / iconv: OK\n";
 ' "${PHP_VERSION:-83}"
 
+# Check the actual Ghostscript conversion pipeline as the container's default
+# unprivileged user, not just that the package exists. Exercise a font, PDF
+# generation, PDF normalization and page rasterization without network access.
+echo ">> Testing Ghostscript PDF conversion..."
+dc exec -T app sh -eu -c '
+  test "$(id -u)" != 0
+  test -x /usr/bin/gs
+  tmp=$(mktemp -d)
+  trap "rm -rf \"$tmp\"" EXIT
+  printf "%%!PS\n/Helvetica findfont 12 scalefont setfont\n72 720 moveto (Moodle PDF annotation) show\nshowpage\n" > "$tmp/input.ps"
+  /usr/bin/gs -q -dSAFER -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile="$tmp/input.pdf" "$tmp/input.ps"
+  /usr/bin/gs -q -dSAFER -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -sOutputFile="$tmp/normalized.pdf" "$tmp/input.pdf"
+  /usr/bin/gs -q -dSAFER -dBATCH -dNOPAUSE -sDEVICE=png16m -r72 -sOutputFile="$tmp/page-%d.png" "$tmp/normalized.pdf"
+  test -s "$tmp/normalized.pdf"
+  test -s "$tmp/page-1.png"
+'
+
 # 2) Moodle-context moosh smoke test, executed inside the running app container.
 echo ">> Running the Moodle-context moosh smoke test inside app..."
 if ! dc exec -T -e MOODLE_VERSION="${MOODLE_VERSION}" app sh /tmp/run_tests.sh moosh; then
