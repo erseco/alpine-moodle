@@ -8,6 +8,13 @@
 ARG PHP_WEBSERVER_VERSION=3.24-php84
 FROM ghcr.io/erseco/alpine-php-webserver:${PHP_WEBSERVER_VERSION}
 
+# The base image must ship nginx 1.30.7+, which fixes the HTTP/2 RCEs
+# CVE-2026-123007 and CVE-2026-123633. Fails the build on a stale base.
+ARG NGINX_MIN_VERSION=1.30.7
+RUN v="$(nginx -v 2>&1 | sed 's|.*/||')" \
+ && [ "$(apk version -t "$v" "$NGINX_MIN_VERSION")" != "<" ] \
+ || { echo "nginx $v is older than $NGINX_MIN_VERSION" >&2; exit 1; }
+
 LABEL maintainer="Ernesto Serrano <info@ernesto.es>"
 
 USER root
