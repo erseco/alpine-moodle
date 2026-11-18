@@ -180,13 +180,13 @@ Define the ENV variables in `docker-compose.yml`. The full reference with notes,
 | `MOODLE_SITENAME`           | `Dockerized_Moodle`  | Full site name shown on the front page. |
 | `MOODLE_USERNAME`           | `moodleuser`         | Admin username. **Override on first boot.** |
 | `MOODLE_PASSWORD`           | `PLEASE_CHANGEME`    | Admin password. **Override on first boot.** |
-| `SMTP_HOST`                 | `smtp.gmail.com`     | SMTP server. |
+| `SMTP_HOST`                 | `smtp.gmail.com`     | SMTP server. Mail settings are rewritten on every start; to manage them from Moodle's admin pages set `SMTP_HOST`, `MOODLE_MAIL_NOREPLY_ADDRESS` and `MOODLE_MAIL_PREFIX` to `""` (leaving them out applies the defaults). See [environment variables](https://erseco.github.io/alpine-moodle/environment-variables/). |
 | `SMTP_PORT`                 | `587`                | SMTP port. |
 | `SMTP_USER`                 | `your_email@gmail.com` | SMTP username. |
 | `SMTP_PASSWORD`             | `your_password`      | SMTP password. |
 | `SMTP_PROTOCOL`             | `tls`                | `tls`, `ssl` or empty. |
-| `MOODLE_MAIL_NOREPLY_ADDRESS` | `noreply@localhost` | No-reply address. |
-| `MOODLE_MAIL_PREFIX`        | `[moodle]`           | Email subject prefix. |
+| `MOODLE_MAIL_NOREPLY_ADDRESS` | `noreply@localhost` | No-reply address. Empty keeps the value set in the admin pages. |
+| `MOODLE_MAIL_PREFIX`        | `[moodle]`           | Email subject prefix. Empty keeps the value set in the admin pages. |
 | `AUTO_UPDATE_MOODLE`        | `true`               | Set to `false` to skip `admin/cli/upgrade.php` on container start. |
 | `SYNC_MOODLE_CODE`          | `auto`               | Refresh Moodle PHP code from the image into a persistent `moodlehtml` volume when versions differ (`auto` / `always` / `never`). See [upgrading](https://erseco.github.io/alpine-moodle/upgrading/). |
 | `EXTRA_PLUGIN_PATHS`        | *(empty)*            | Space-separated relative paths under `/var/www/html` preserved across a code sync (e.g. `mod/attendance theme/space`). |
