@@ -100,9 +100,26 @@ ENV LANG=en_US.UTF-8 \
 # MOODLE_COMMIT (optional) pins the exact commit to download; when set it
 # takes precedence over MOODLE_VERSION for the URL.
 #
-# Download and extract Moodle into the immutable source tree, then seed the
-# runtime document root. Runtime upgrades of a persistent moodlehtml volume are
-# handled by rootfs/docker-entrypoint-init.d/010-sync-moodle-code.sh.
+# Download and extract Moodle into the immutable source tree, patch it and
+# seed the runtime document root. Runtime upgrades of a persistent moodlehtml
+# volume are handled by rootfs/docker-entrypoint-init.d/010-sync-moodle-code.sh.
+#
+# Experimental SQLite support (MDL-88218): selecting the right
+# ateeducacion/moodle patch per branch (PR #1 main, #5 5.2, #2 5.1, #3 5.0,
+# #4 4.5), tolerating cosmetic hunk rejects, verifying the SQLite driver is
+# present, and declaring the sqlite VENDOR in the installed version's
+# environment.xml block all live in scripts/apply-sqlite-support.sh (see its
+# header for the full rationale). Versions without a patch keep SQLite disabled.
+#
+# Download, patch and seed MUST stay in this single RUN: /var/www/html is
+# seeded with hardlinks (cp -al), and a layer tarball only stores the file
+# data once when both names are created in the same layer. That halves the
+# Moodle download (~85 MB compressed). Split across RUNs, the second layer
+# would carry a full copy again. At runtime the trees stay independent:
+# overlayfs copies a file up before modifying it, and a volume mounted on
+# /var/www/html is populated with real copies.
+# Runs as nobody so both trees stay nobody-owned.
+COPY --chown=nobody scripts/apply-sqlite-support.sh /tmp/apply-sqlite-support.sh
 RUN if [ -n "$MOODLE_COMMIT" ]; then \
       MOODLE_URL="https://github.com/moodle/moodle/archive/${MOODLE_COMMIT}.tar.gz"; \
     elif [ "$MOODLE_VERSION" = "main" ]; then \
@@ -113,21 +130,13 @@ RUN if [ -n "$MOODLE_COMMIT" ]; then \
     echo "Downloading Moodle ${MOODLE_VERSION}${MOODLE_COMMIT:+ (commit ${MOODLE_COMMIT})} from: $MOODLE_URL" && \
     curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 "$MOODLE_URL" -o /tmp/moodle.tar.gz && \
     tar xzf /tmp/moodle.tar.gz --strip-components=1 -C /usr/src/moodle && \
-    rm -f /tmp/moodle.tar.gz
-
-# Apply experimental SQLite support (MDL-88218). The heavy lifting — selecting
-# the right ateeducacion/moodle patch per branch (PR #1 main, #5 5.2, #2 5.1,
-# #3 5.0, #4 4.5), tolerating cosmetic hunk rejects, verifying the SQLite driver is
-# present, and declaring the sqlite VENDOR in the installed version's
-# environment.xml block — lives in scripts/apply-sqlite-support.sh (see its
-# header for the full rationale). Versions without a patch keep SQLite disabled.
-# Runs as nobody (like the Moodle download above) so the tree stays nobody-owned.
-COPY --chown=nobody scripts/apply-sqlite-support.sh /tmp/apply-sqlite-support.sh
-RUN MOODLE_DIR=/usr/src/moodle sh /tmp/apply-sqlite-support.sh "$MOODLE_VERSION" \
+    rm -f /tmp/moodle.tar.gz \
+    && MOODLE_DIR=/usr/src/moodle sh /tmp/apply-sqlite-support.sh "$MOODLE_VERSION" \
     && rm -f /tmp/apply-sqlite-support.sh \
-    # Seed the runtime tree and write the release stamp used by the sync script.
-    # Moodle <5.1 keeps version.php at the tree root; 5.1+ moved it under public/.
-    && cp -a /usr/src/moodle/. /var/www/html/ \
+    && cp -al /usr/src/moodle/. /var/www/html/ \
+    # Release stamp used by the sync script. Moodle <5.1 keeps version.php at
+    # the tree root; 5.1+ moved it under public/. Written after the hardlink
+    # seed and copied (not linked): the stamp is rewritten in place at runtime.
     && VERSION_PHP=/usr/src/moodle/version.php \
     && if [ ! -f "$VERSION_PHP" ]; then VERSION_PHP=/usr/src/moodle/public/version.php; fi \
     && sed -n 's/^[[:space:]]*\$version[[:space:]]*=[[:space:]]*\([0-9][0-9.]*\).*/\1/p' \

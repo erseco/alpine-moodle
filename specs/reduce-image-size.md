@@ -59,14 +59,17 @@ the actual build is the authority.
 | Keep both trees | 0 | Current behavior; safest baseline |
 | One source tree, seed at startup | Up to ~84 MB | Extra first-boot I/O and writable-layer storage; empty/never mode and downstream Dockerfile contracts need explicit solutions |
 | Build-stage source then copy final patched tree once | Small unless duplication also removed | Useful for intermediate patch/cache files, not sufficient alone |
-| Hardlink two trees in a single layer | Potentially comparable to one tree; benchmark | Shared inode/overlay copy-up semantics can contaminate the source or behave differently across storage drivers; not recommended without isolation proof |
+| Hardlink two trees in a single layer | Measured: 86.9 MB (36.75 %) on v5.2.4 arm64 | **Implemented in this PR.** Paths, entrypoint and volume behavior are unchanged. overlayfs copies a file up before modifying it, so the trees stay independent; a volume on /var/www/html gets real copies. Download, patch and `cp -al` must share one RUN. Not yet verified on btrfs/zfs/vfs storage drivers |
 | Compressed archive as recovery source plus expanded runtime | Likely limited compressed transfer savings | Preserves pre-populated runtime, but duplicate compressed content and archive unpack cost |
 | Symlink runtime to source | Potentially comparable to one tree | A volume masks the symlink, and plugin edits may alter the recovery source; reject as a default |
 | Runtime download or externally supplied source | Up to both Moodle layers | Requires network/host source on startup, weakens release reproducibility/offline use; reject as a default |
 
-Prefer the single packaged source + explicit first-run copy model if the
-compatibility contract can be met. Do not remove the build-time seed as a
-standalone change. Consider keeping the existing layout as a compatibility
+Prefer hardlinking the two trees in a single layer: it gives the same saving
+as a single tree without changing any path or startup contract. Seeding
+/var/www/html at first run is a last resort: with the current sync script it
+deletes plugins added by derived images, leaves `SYNC_MOODLE_CODE=never`
+without code, adds a ~590 MB copy to every new container and lets replicas
+that share a fresh volume sync concurrently without a lock. Consider keeping the existing layout as a compatibility
 target only if evidence shows it is needed; avoid multiple release variants
 unless their maintenance cost is justified. Do not aggressively delete upstream
 tests, vendor dependencies, localization data, license files or PHP extensions
@@ -160,8 +163,26 @@ keep the current layout and consider smaller build-stage optimizations first.
 
 ## Decision
 
-This PR is deliberately research-only: no change to Dockerfile, entrypoint,
-release tags or existing users. Follow-up implementation should use the
-measurements and acceptance criteria above, with a separately reviewable
-migration change and rollback documentation (restore DB and volumes from a
-backup; reverting the image alone cannot undo a Moodle DB upgrade).
+This PR implements the hardlink layout: the Dockerfile downloads, patches and
+seeds Moodle in one RUN, and /var/www/html is created with `cp -al` from
+/usr/src/moodle. The release stamp is copied, not linked, because it is
+rewritten in place at runtime. Entrypoint, paths, release tags and volumes are
+unchanged, so existing users need no migration.
+
+Measured on v5.2.4, PHP 8.3, linux/arm64, same upstream commit, with
+scripts/compare-oci-size.py over OCI exports of main (with Ghostscript) and
+this branch:
+
+| | Compressed layer bytes |
+| --- | --- |
+| main | 236 448 482 |
+| this branch | 149 564 445 |
+| delta | −86 884 037 (−36.75 %) |
+
+`run_tests.sh sync` now edits a core file in /var/www/html in place, checks
+that /usr/src/moodle did not change, and checks that the sync restores the
+file.
+
+Still open: btrfs/zfs/vfs storage drivers (where hardlinks may keep sharing an
+inode at runtime), the other architectures, and zstd layer compression as a
+further optional saving.
