@@ -308,6 +308,12 @@ configure_moodle_settings() {
     echo "Configuring settings..."
     php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=pathtophp --set=/usr/bin/php
     php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=pathtodu --set=/usr/bin/du
+    # Ghostscript for the Annotate PDF feedback plugin. preventexecpath locks
+    # the path in the admin pages, so fill it in when it is unset or empty
+    # (cfg.php exits 3 for unset) and keep any other value.
+    if [ -z "$(php /var/www/html/admin/cli/cfg.php --name=pathtogs 2>/dev/null)" ]; then
+        php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=pathtogs --set=/usr/bin/gs
+    fi
     php -d max_input_vars=10000 /var/www/html/admin/cli/cfg.php --name=enableblogs --set=0
     # Empty mail variables leave the values saved in the admin pages alone
     # (#194). With SMTP_HOST set, empty user/password/protocol are valid

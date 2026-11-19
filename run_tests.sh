@@ -22,6 +22,13 @@ set -eu
 #     that nginx really routes unmatched requests to public/r.php (including
 #     the .js ES modules Moodle 5.3+ serves from /core/esm/, #178).
 #
+#   MODE=pdf
+#     Moodle-context Ghostscript test for the Annotate PDF feedback plugin
+#     (assignfeedback_editpdf). Must run INSIDE the `app` container as its
+#     unprivileged user. Asserts that $CFG->pathtogs points at the bundled
+#     /usr/bin/gs, that Moodle's own Ghostscript test renders a page and that
+#     the PDF 1.4 conversion Moodle applies to submissions succeeds.
+#
 #   MODE=sync
 #     Moodle-context regression test for 010-sync-moodle-code.sh (#103, #161).
 #     Must run INSIDE the `app` container. Simulates a stale moodlehtml volume
@@ -324,6 +331,49 @@ run_checks_smoke_test() {
   fi
   echo "Status-check regression test passed."
 }
+
+# --------------------------------------------------------------------------
+# Moodle-context Ghostscript test for the Annotate PDF feedback plugin
+# --------------------------------------------------------------------------
+run_pdf_smoke_test() {
+  echo "== Moodle PDF annotation (Ghostscript) smoke test =="
+
+  # PHP-FPM and cron run Ghostscript unprivileged; root would hide permission bugs.
+  if [ "$(id -u)" = "0" ]; then
+    echo "FAIL: run this mode as the container's unprivileged user, not root."
+    exit 1
+  fi
+
+  # Go through the plugin's own code paths, so the test follows $CFG->pathtogs.
+  # shellcheck disable=SC2016
+  php -r '
+    define("CLI_SCRIPT", true);
+    require("/var/www/html/config.php");
+    $gs = $CFG->pathtogs ?? "";
+    if ($gs !== "/usr/bin/gs") {
+        echo "FAIL: \$CFG->pathtogs is \"{$gs}\", expected /usr/bin/gs.\n";
+        exit(1);
+    }
+    $result = \assignfeedback_editpdf\pdf::test_gs_path(true);
+    if ($result->status !== \assignfeedback_editpdf\pdf::GSPATH_OK) {
+        echo "FAIL: Moodle Ghostscript test => {$result->status} " . strip_tags((string) $result->message) . "\n";
+        exit(1);
+    }
+    echo "OK:   Moodle Ghostscript test rendered a page with {$gs}.\n";
+    $fixture = $CFG->dirroot . "/mod/assign/feedback/editpdf/tests/fixtures/testgs.pdf";
+    if (\assignfeedback_editpdf\pdf::ensure_pdf_file_compatible($fixture) === false) {
+        echo "FAIL: Ghostscript could not convert a PDF to version 1.4 for annotation.\n";
+        exit(1);
+    }
+    echo "OK:   Ghostscript converted a PDF to version 1.4 for annotation.\n";
+  '
+  echo "PDF annotation smoke test passed."
+}
+
+if [ "$MODE" = "pdf" ]; then
+  run_pdf_smoke_test
+  exit 0
+fi
 
 if [ "$MODE" = "checks" ]; then
   run_checks_smoke_test

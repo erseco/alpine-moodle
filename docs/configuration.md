@@ -109,6 +109,24 @@ The container runs as `nobody`. If you need to install packages for debugging, r
 docker compose exec --user root moodle sh -c "apk update && apk add nano curl"
 ```
 
+## PDF annotation in assignments
+
+Ghostscript (`/usr/bin/gs`) is included for Moodle's built-in **Annotate PDF**
+assignment feedback plugin (`assignfeedback_editpdf`). On every start the
+container sets **Path to Ghostscript** (`pathtogs`) to `/usr/bin/gs` when it is
+unset or empty, so new and existing sites need no extra step; any other saved
+value is kept. The image sets `$CFG->preventexecpath`, which makes the path
+read-only in **Site administration → Server → System paths**, so change it from
+the CLI:
+
+```bash
+docker compose exec moodle php admin/cli/cfg.php --name=pathtogs --set=/usr/bin/gs
+```
+
+No additional daemon or Poppler package is required. Enable the assignment
+feedback plugin if needed, then use Moodle's built-in Ghostscript test and try
+an actual PDF submission after upgrading.
+
 ## Custom `config.php` tweaks
 
 The startup script enforces the settings it manages (wwwroot, DB, proxy flags, Redis). You can still add custom `$CFG` values through `POST_CONFIGURE_COMMANDS` using sed or PHP, or by mounting a small snippet that `require`s at the end of `config.php`. Anything you write during runtime is lost on the next start unless it lives inside a persistent volume.
