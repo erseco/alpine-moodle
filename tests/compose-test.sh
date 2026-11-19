@@ -7,9 +7,12 @@
 #   1. Builds + starts the stack (app, its DB/redis deps and the `sut` probe).
 #   2. Black-box HTTP web check: waits for the `sut` container (which runs
 #      run_tests.sh) and takes its exit code as the readiness/HTTP/SQLite result.
-#   3. Moodle-context moosh smoke test: runs `run_tests.sh moosh` INSIDE the
+#   3. Moodle-context Ghostscript test for Annotate PDF (`run_tests.sh pdf`)
+#      INSIDE the running `app` container, again after the restart with
+#      pathtogs cleared.
+#   4. Moodle-context moosh smoke test: runs `run_tests.sh moosh` INSIDE the
 #      running `app` container (moosh needs the Moodle codebase + DB).
-#   4. Moodle-context status-check regression test (`run_tests.sh checks`),
+#   5. Moodle-context status-check regression test (`run_tests.sh checks`),
 #      before and after the code sync + restart.
 #
 # The stack is always torn down; on any failure the container logs, the failing
@@ -86,22 +89,14 @@ dc exec -T app php -r '
   echo "PHP " . PHP_VERSION . " / 64-bit / extensions / iconv: OK\n";
 ' "${PHP_VERSION:-83}"
 
-# Check the actual Ghostscript conversion pipeline as the container's default
-# unprivileged user, not just that the package exists. Exercise a font, PDF
-# generation, PDF normalization and page rasterization without network access.
-echo ">> Testing Ghostscript PDF conversion..."
-dc exec -T app sh -eu -c '
-  test "$(id -u)" != 0
-  test -x /usr/bin/gs
-  tmp=$(mktemp -d)
-  trap "rm -rf \"$tmp\"" EXIT
-  printf "%%!PS\n/Helvetica findfont 12 scalefont setfont\n72 720 moveto (Moodle PDF annotation) show\nshowpage\n" > "$tmp/input.ps"
-  /usr/bin/gs -q -dSAFER -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile="$tmp/input.pdf" "$tmp/input.ps"
-  /usr/bin/gs -q -dSAFER -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -sOutputFile="$tmp/normalized.pdf" "$tmp/input.pdf"
-  /usr/bin/gs -q -dSAFER -dBATCH -dNOPAUSE -sDEVICE=png16m -r72 -sOutputFile="$tmp/page-%d.png" "$tmp/normalized.pdf"
-  test -s "$tmp/normalized.pdf"
-  test -s "$tmp/page-1.png"
-'
+# Ghostscript for Annotate PDF, checked through Moodle's $CFG->pathtogs and the
+# plugin's own code as the container's default unprivileged user.
+echo ">> Running the Moodle PDF annotation (Ghostscript) test inside app..."
+if ! dc exec -T app sh /tmp/run_tests.sh pdf; then
+  echo "ERROR: Ghostscript PDF annotation test failed for Moodle ${MOODLE_VERSION} (${FILE})."
+  dump_logs
+  exit 1
+fi
 
 # 2) Moodle-context moosh smoke test, executed inside the running app container.
 echo ">> Running the Moodle-context moosh smoke test inside app..."
@@ -135,6 +130,13 @@ fi
 #    theme config.php files, …) only explodes on the NEXT boot — exactly what
 #    hit real deployments — so that boot must be part of CI.
 echo ">> Restarting app to verify the synced tree boots cleanly..."
+# Clear pathtogs first: like an existing site with an empty Ghostscript path,
+# the next boot must fill it in again (checked by the PDF test below).
+if ! dc exec -T app php /var/www/html/admin/cli/cfg.php --name=pathtogs --set=; then
+  echo "ERROR: could not clear pathtogs before the restart (${FILE})."
+  dump_logs
+  exit 1
+fi
 if ! dc restart app; then
   echo "ERROR: 'docker compose restart app' failed after the code sync (${FILE})."
   dump_logs
@@ -154,6 +156,13 @@ fi
 echo ">> Re-running the status-check regression test after the restart..."
 if ! dc exec -T app sh /tmp/run_tests.sh checks; then
   echo "ERROR: status-check regression test failed after the post-sync restart (${FILE})."
+  dump_logs
+  exit 1
+fi
+
+echo ">> Re-running the Ghostscript test after the restart (pathtogs was cleared)..."
+if ! dc exec -T app sh /tmp/run_tests.sh pdf; then
+  echo "ERROR: the post-sync boot did not restore pathtogs for Moodle ${MOODLE_VERSION} (${FILE})."
   dump_logs
   exit 1
 fi
