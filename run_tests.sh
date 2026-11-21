@@ -149,6 +149,20 @@ run_sync_smoke_test() {
   # inside the tree (the sync must remove them; the image-resident copies at
   # ${cli} are the ones that matter now).
   printf '0.00\n' > "$stamp"
+
+  # The image seeds ${html} with hardlinks to ${src} (one copy in the layer).
+  # An in-place edit of a core file in the runtime tree must never reach the
+  # pristine source, and the sync must then repair the edited file.
+  core_rel="${src_version_php#"${src}"/}"
+  src_stamp_before="$(cksum < "${src}/.alpine-moodle-release")"
+  src_core_before="$(cksum < "$src_version_php")"
+  printf '// in-place edit made by the sync smoke test\n' >> "${html}/${core_rel}"
+  if [ "$(cksum < "$src_version_php")" != "$src_core_before" ] \
+    || [ "$(cksum < "${src}/.alpine-moodle-release")" != "$src_stamp_before" ]; then
+    echo "ERROR: writing to ${html} modified the pristine source tree ${src}"
+    exit 1
+  fi
+  echo "Pristine source tree isolated from runtime-tree writes."
   printf 'stale-core-from-old-image\n' > "${html}/STALE_CORE_FILE_FROM_OLD_IMAGE"
   mkdir -p "${html}/${plugroot}/syncsmoke"
   printf '<?php // custom plugin marker for sync test\n' > "${html}/${plugroot}/syncsmoke/version.php"
@@ -178,6 +192,12 @@ run_sync_smoke_test() {
     exit 1
   fi
   echo "Stale core file removed."
+
+  if [ "$(cksum < "${html}/${core_rel}")" != "$src_core_before" ]; then
+    echo "ERROR: sync did not restore the edited core file ${core_rel}"
+    exit 1
+  fi
+  echo "Edited core file ${core_rel} restored from the pristine source."
 
   config_after="$(cksum < "${html}/config.php")"
   if [ "$config_before" != "$config_after" ]; then
