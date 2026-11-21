@@ -145,6 +145,24 @@ Example — install an extra Alpine package for debugging:
 docker compose exec --user root moodle sh -c "apk update && apk add nano curl"
 ```
 
+## PDF annotation in assignments
+
+Ghostscript (`/usr/bin/gs`) is included for Moodle's built-in **Annotate PDF**
+assignment feedback plugin (`assignfeedback_editpdf`). On every start the
+container sets **Path to Ghostscript** (`pathtogs`) to `/usr/bin/gs` when it is
+unset or empty, so new and existing sites need no extra step; any other saved
+value is kept. The image sets `$CFG->preventexecpath`, which makes the path
+read-only in **Site administration → Server → System paths**, so change it from
+the CLI:
+
+```bash
+docker compose exec moodle php admin/cli/cfg.php --name=pathtogs --set=/usr/bin/gs
+```
+
+No additional daemon or Poppler package is required. Enable the assignment
+feedback plugin if needed, then use Moodle's built-in Ghostscript test and try
+an actual PDF submission after upgrading.
+
 ## Configuration
 
 Define the ENV variables in `docker-compose.yml`. The full reference with notes, grouping and defaults lives at <https://erseco.github.io/alpine-moodle/environment-variables/>.
@@ -181,13 +199,13 @@ Define the ENV variables in `docker-compose.yml`. The full reference with notes,
 | `MOODLE_SITENAME`           | `Dockerized_Moodle`  | Full site name shown on the front page. |
 | `MOODLE_USERNAME`           | `moodleuser`         | Admin username. **Override on first boot.** |
 | `MOODLE_PASSWORD`           | `PLEASE_CHANGEME`    | Admin password. **Override on first boot.** |
-| `SMTP_HOST`                 | `smtp.gmail.com`     | SMTP server. |
+| `SMTP_HOST`                 | `smtp.gmail.com`     | SMTP server. Mail settings are rewritten on every start; to manage them from Moodle's admin pages set `SMTP_HOST`, `MOODLE_MAIL_NOREPLY_ADDRESS` and `MOODLE_MAIL_PREFIX` to `""` (leaving them out applies the defaults). See [environment variables](https://erseco.github.io/alpine-moodle/environment-variables/). |
 | `SMTP_PORT`                 | `587`                | SMTP port. |
 | `SMTP_USER`                 | `your_email@gmail.com` | SMTP username. |
 | `SMTP_PASSWORD`             | `your_password`      | SMTP password. |
 | `SMTP_PROTOCOL`             | `tls`                | `tls`, `ssl` or empty. |
-| `MOODLE_MAIL_NOREPLY_ADDRESS` | `noreply@localhost` | No-reply address. |
-| `MOODLE_MAIL_PREFIX`        | `[moodle]`           | Email subject prefix. |
+| `MOODLE_MAIL_NOREPLY_ADDRESS` | `noreply@localhost` | No-reply address. Empty keeps the value set in the admin pages. |
+| `MOODLE_MAIL_PREFIX`        | `[moodle]`           | Email subject prefix. Empty keeps the value set in the admin pages. |
 | `AUTO_UPDATE_MOODLE`        | `true`               | Set to `false` to skip `admin/cli/upgrade.php` on container start. |
 | `SYNC_MOODLE_CODE`          | `auto`               | Refresh Moodle PHP code from the image into a persistent `moodlehtml` volume when versions differ (`auto` / `always` / `never`). See [upgrading](https://erseco.github.io/alpine-moodle/upgrading/). |
 | `EXTRA_PLUGIN_PATHS`        | *(empty)*            | Space-separated relative paths under `/var/www/html` preserved across a code sync (e.g. `mod/attendance theme/space`). |

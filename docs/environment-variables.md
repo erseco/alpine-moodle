@@ -79,6 +79,14 @@ See [Reverse Proxy](reverse-proxy.md) for concrete examples.
 | `MOODLE_MAIL_NOREPLY_ADDRESS`  | `noreply@localhost`    | Used as `noreplyaddress`. |
 | `MOODLE_MAIL_PREFIX`           | `[moodle]`             | Email subject prefix. |
 
+These values are written to Moodle on **every** container start, so changes made in
+*Site administration → Server → Email → Outgoing mail configuration* are overwritten.
+To manage outgoing mail from the admin pages instead, set these variables to an
+**empty string** (`SMTP_HOST: ""`, `MOODLE_MAIL_NOREPLY_ADDRESS: ""`,
+`MOODLE_MAIL_PREFIX: ""`). With `SMTP_HOST` empty, none of the `SMTP_*` settings
+are written; empty `MOODLE_MAIL_*` values are skipped one by one. Leaving a variable
+out does **not** count as empty: the image default above applies.
+
 ## PHP / web server tuning
 
 | Variable               | Default | Description |
