@@ -34,11 +34,16 @@ Every setting exposed by `erseco/alpine-moodle`. Defaults come from the `Dockerf
 | `DB_NAME`               | `moodle`  | Database name. |
 | `DB_USER`               | `moodle`  | Database user. |
 | `DB_PASS`               | `moodle`  | Database password. |
-| `DB_SSL`                | *(empty)* | Database TLS mode: `require` or `verify-full`; PostgreSQL also supports `prefer` and `disable`. Applied on every start before Moodle's database check. Empty leaves existing settings unchanged; ignored for SQLite. |
+| `DB_SSL`                | *(empty)* | `require` or `verify-full` for MariaDB, MySQL and PostgreSQL. Empty or unset preserves existing TLS settings. Ignored for SQLite. |
 | `DB_PREFIX`             | `mdl_`    | Table prefix. Must be non-numeric. |
 | `DB_SQLITE_PATH`        | `/var/www/moodledata/sqlite/moodle.sqlite` | SQLite file path. Must resolve inside `/var/www/moodledata/`. |
 | `DB_FETCHBUFFERSIZE`    | *(empty)* | Set to `0` when using PgBouncer in *transaction* mode. |
 | `DB_DBHANDLEOPTIONS`    | `false`   | Set to `true` with PgBouncer (pool modes that reject `SET` options). |
+
+With `DB_SSL` enabled, create the database before starting Moodle. Use a TCP
+hostname and make the database CA available to the PHP or PostgreSQL client
+as required by the driver. `verify-full` requests the driver's certificate and
+hostname verification.
 
 ## Database — read replica (optional)
 

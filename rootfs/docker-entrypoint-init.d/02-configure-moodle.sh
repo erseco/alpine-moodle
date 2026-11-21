@@ -4,6 +4,14 @@
 #
 set -eo pipefail
 
+case "${DB_SSL:-}" in
+    ''|require|verify-full) ;;
+    *)
+        echo "ERROR: DB_SSL must be require, verify-full, or empty." >&2
+        exit 1
+        ;;
+esac
+
 # Fail fast on invalid Redis auth configuration.
 if [ -n "${REDIS_USER:-}" ] && [ -z "${REDIS_PASSWORD:-}" ]; then
     echo "ERROR: REDIS_USER requires REDIS_PASSWORD." >&2
@@ -189,6 +197,12 @@ CFGEOF
         return
     fi
 
+    # install.php --skip-database still connects without TLS options.
+    if [ -n "${DB_SSL:-}" ]; then
+        DB_TYPE="$DB_TYPE" php "$alpine_moodle_cli/configure_db_tls.php" generate "$config_file"
+        return
+    fi
+
     set -- \
         --lang=$MOODLE_LANGUAGE \
         --wwwroot=$SITE_URL \
@@ -228,28 +242,24 @@ install_database() {
 
 # Function to set extra database settings
 set_extra_db_settings() {
-    if [ "$DB_TYPE" != "sqlite3" ] && [ -n "${DB_SSL:-}" ]; then
-        case "$DB_SSL" in
-            require|verify-full|prefer|disable) ;;
-            *)
-                echo "ERROR: DB_SSL must be require, verify-full, prefer, disable, or empty." >&2
-                exit 1
-                ;;
-        esac
-        update_or_add_config_value "\$CFG->dboptions\['ssl'\]" "$DB_SSL"
-    fi
     if [ -n "$DB_FETCHBUFFERSIZE" ]; then
-        update_or_add_config_value "\$CFG->dboptions\['fetchbuffersize'\]" "$DB_FETCHBUFFERSIZE"
+        update_or_add_config_value "\$CFG->dboptions['fetchbuffersize']" "$DB_FETCHBUFFERSIZE"
     fi
     if [ "$DB_DBHANDLEOPTIONS" = 'true' ]; then
-        update_or_add_config_value "\$CFG->dboptions\['dbhandlesoptions'\]" 'true'
+        update_or_add_config_value "\$CFG->dboptions['dbhandlesoptions']" 'true'
     fi
     if [ -n "$DB_HOST_REPLICA" ]; then
         if [ -n "$DB_USER_REPLICA" ] && [ -n "$DB_PASS_REPLICA" ] && [ -n "$DB_PORT_REPLICA" ]; then
-            update_or_add_config_value "\$CFG->dboptions\['readonly'\]" "[ 'instance' => [ 'dbhost' => '$DB_HOST_REPLICA', 'dbport' => '$DB_PORT_REPLICA', 'dbuser' => '$DB_USER_REPLICA', 'dbpass' => '$DB_PASS_REPLICA' ] ]"
+            update_or_add_config_value "\$CFG->dboptions['readonly']" "[ 'instance' => [ 'dbhost' => '$DB_HOST_REPLICA', 'dbport' => '$DB_PORT_REPLICA', 'dbuser' => '$DB_USER_REPLICA', 'dbpass' => '$DB_PASS_REPLICA' ] ]"
         else
-            update_or_add_config_value "\$CFG->dboptions\['readonly'\]" "[ 'instance' => [ '$DB_HOST_REPLICA' ] ]"
+            update_or_add_config_value "\$CFG->dboptions['readonly']" "[ 'instance' => [ '$DB_HOST_REPLICA' ] ]"
         fi
+    fi
+}
+
+set_tls_settings() {
+    if [ "$DB_TYPE" != "sqlite3" ] && [ -n "${DB_SSL:-}" ]; then
+        php "$alpine_moodle_cli/configure_db_tls.php" apply "$config_file" "$DB_SSL"
     fi
 }
 
@@ -469,10 +479,8 @@ fi
 # Generate config.php file if it doesn't exist
 if [ ! -f "$config_file" ]; then
     generate_config_file
+    set_extra_db_settings
 fi
-
-# Apply extra database settings to new and persisted configs before Moodle bootstrap.
-set_extra_db_settings
 
 # Detect Moodle >=5.1 (with public/ directory) — do it here, just after config.php exists
 if [ -d /var/www/html/public ]; then
@@ -494,6 +502,7 @@ fi
 
 # Upgrade config.php file
 upgrade_config_file
+set_tls_settings
 
 # Check if the database is already installed.
 # isinstalled.php exit codes: 0 = not installed, 2 = installed, anything else
