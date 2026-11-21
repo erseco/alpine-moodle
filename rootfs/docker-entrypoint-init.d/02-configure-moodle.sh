@@ -4,6 +4,14 @@
 #
 set -eo pipefail
 
+case "${DB_SSL:-}" in
+    ''|require|verify-full) ;;
+    *)
+        echo "ERROR: DB_SSL must be require, verify-full, or empty." >&2
+        exit 1
+        ;;
+esac
+
 # Fail fast on invalid Redis auth configuration.
 if [ -n "${REDIS_USER:-}" ] && [ -z "${REDIS_PASSWORD:-}" ]; then
     echo "ERROR: REDIS_USER requires REDIS_PASSWORD." >&2
@@ -189,6 +197,12 @@ CFGEOF
         return
     fi
 
+    # install.php --skip-database still connects without TLS options.
+    if [ -n "${DB_SSL:-}" ]; then
+        DB_TYPE="$DB_TYPE" php "$alpine_moodle_cli/configure_db_tls.php" generate "$config_file"
+        return
+    fi
+
     set -- \
         --lang=$MOODLE_LANGUAGE \
         --wwwroot=$SITE_URL \
@@ -240,6 +254,12 @@ set_extra_db_settings() {
         else
             update_or_add_config_value "\$CFG->dboptions['readonly']" "[ 'instance' => [ '$DB_HOST_REPLICA' ] ]"
         fi
+    fi
+}
+
+set_tls_settings() {
+    if [ "$DB_TYPE" != "sqlite3" ] && [ -n "${DB_SSL:-}" ]; then
+        php "$alpine_moodle_cli/configure_db_tls.php" apply "$config_file" "$DB_SSL"
     fi
 }
 
@@ -482,6 +502,7 @@ fi
 
 # Upgrade config.php file
 upgrade_config_file
+set_tls_settings
 
 # Check if the database is already installed.
 # isinstalled.php exit codes: 0 = not installed, 2 = installed, anything else
