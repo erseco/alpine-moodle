@@ -109,3 +109,23 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: ./tests/upgrade-test.sh
+
+  database-tls:
+    name: "Database TLS · Moodle ${{ matrix.moodle }} · ${{ matrix.backend }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {moodle: v4.5.14, backend: mariadb}
+          - {moodle: v5.3.0, backend: mariadb}
+          - {moodle: v5.3.0, backend: mysqli}
+          - {moodle: v5.3.0, backend: pgsql}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install and restart with TLS required
+        env:
+          MOODLE_VERSION: ${{ matrix.moodle }}
+          BACKEND: ${{ matrix.backend }}
+        run: ./tests/database-tls-test.sh "$BACKEND"
