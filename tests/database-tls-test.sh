@@ -14,7 +14,7 @@ esac
 tls=$(mktemp -d)
 # Docker Desktop shares /tmp as /private/tmp.
 tls=$(cd "$tls" && pwd -P)
-project=moodle-tls-${tls##*.}
+project=moodle-tls-$(printf '%s' "${tls##*.}" | LC_ALL=C tr '[:upper:]' '[:lower:]')
 app=$project-app
 db=$project-db
 cleanup() {
